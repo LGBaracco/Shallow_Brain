@@ -3,11 +3,12 @@ import itertools
 import numpy as np
 from typing import List
 import numpy.typing as npt
+import matplotlib.pyplot as plt
 
 
 def generate_stimuli() -> (npt.NDArray, List):
 
-    images = np.zeros((121, 16, 32))
+    images = np.zeros((110, 16, 32))
     labels = []
 
     index = 0
@@ -17,7 +18,12 @@ def generate_stimuli() -> (npt.NDArray, List):
             left = i / 10.0
             right = j / 10.0
 
-            labels.append(0) if left > right else labels.append(1)
+            if left == right:
+                continue
+            elif left > right:
+                labels.append(0)
+            else:
+                labels.append(1)
 
             images[index, 6:10, 5:9] = left
             images[index, 6:10, 23:27] = right
@@ -60,7 +66,7 @@ def generate_cues() -> (npt.NDArray, List):
 def interleave(cues, cue_labels, stimuli, stimuli_labels) -> (npt.NDArray, List):
     """Might be useless: interleave cues with stimuli. maybe useful for final testing"""
 
-    images = np.zeros((137, 16, 32))
+    images = np.zeros((126, 16, 32))
     labels = []
 
     for i in range(137):
@@ -89,3 +95,22 @@ def generate_motor_labels(cue_labels, stimuli_labels) -> List:
                 motor_labels.append(0)
 
     return motor_labels
+
+
+def generate_motor_test():
+    cues, _ = generate_cues()
+    cues = np.array([cues[3, :, :], cues[-3, :, :]])
+    stimuli, _ = generate_stimuli()
+    stimuli = np.array([stimuli[15, :, :], stimuli[-17, :, :]])
+
+    return cues, stimuli
+
+
+def generate_vague_stimuli():
+    stimuli = np.zeros((11, 16, 32))
+
+    for i in range(10):
+        stimuli[i, 6:10, 5:9] = i/10.0
+        stimuli[i, 6:10, 23:27] = i/10.0
+
+    return stimuli
