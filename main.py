@@ -20,7 +20,7 @@ def training(data: npt.NDArray, labels: List, batch_size: int, lr: float, epochs
     optimizer = optim.Adam(network.parameters(), lr=lr)
 
     for name, param in network.named_parameters():
-        if name == 'fc2.weight' and name == 'fc2.bias':
+        if name == 'fc2.weight' or name == 'fc2.bias' or name == 'fc3.weight' or name == 'fc3.bias':
             param.requires_grad = False
 
     for epoch in range(epochs):
@@ -70,23 +70,21 @@ def transfer_learning(network, cues, stimuli, labels, batch_size: int, lr: float
     stimuli = torch.from_numpy(stimuli).float().to(device)
     labels = torch.tensor(labels).to(device)
 
-    cueset = TensorDataset(cues)
-    cueloader = DataLoader(cueset, batch_size=batch_size, shuffle=False)
-    stimuliset = TensorDataset(stimuli, labels)
-    stimuliloader = DataLoader(stimuliset, batch_size=batch_size, shuffle=False)
+    stimuliset = TensorDataset(cues, stimuli, labels)
+    stimuliloader = DataLoader(stimuliset, batch_size=batch_size, shuffle=True)
 
     criterion = nn.NLLLoss()
     optimizer = optim.Adam(network.parameters(), lr=lr)
 
     for name, param in network.named_parameters():
-        if name != 'fc2.weight' and name != 'fc2.bias':
+        if name != 'fc2.weight' and name != 'fc2.bias' and name != 'fc3.weight' and name != 'fc3.bias':
             param.requires_grad = False
         else:
             param.requires_grad = True
 
     for epoch in range(epochs):
         running_loss = 0
-        for cues, (stimuli, labels) in zip(cueloader, stimuliloader):
+        for cues, stimuli, labels in stimuliloader:
             optimizer.zero_grad()
 
             log_ps = network(stimuli, cues)
@@ -103,7 +101,7 @@ def transfer_learning(network, cues, stimuli, labels, batch_size: int, lr: float
     correct = 0
     total = 0
     with torch.no_grad():
-        for cues, (stimuli, labels) in zip(cueloader, stimuliloader):
+        for cues, stimuli, labels in stimuliloader:
             outputs = network(stimuli, cues)
             _, predicted = torch.max(outputs, 1)
             total += labels.size(0)
@@ -142,21 +140,21 @@ def simple_test(network, cues, stimuli, device):
 
                 value = network(cue)
                 _, predicted = torch.max(value, 1)
-                if predicted[0] == 2:
+                if predicted == 2:
                     output = 'Prosaccade, '
-                elif predicted[0] == 3:
+                elif predicted == 3:
                     output = 'Antisaccade, '
 
-                value = network(stimulus, cue)
+                value = network(stimulus)
                 _, predicted = torch.max(value, 1)
-                if predicted[0] == 0:
+                if predicted == 0:
                     output += 'Brighter left, '
-                elif predicted[0] == 1:
+                elif predicted == 1:
                     output += 'Brighter right, '
 
                 value = network(stimulus, cue)
                 _, predicted = torch.max(value, 1)
-                if predicted[0] == 0:
+                if predicted == 0:
                     output += 'Eye movement left'
                 else:
                     output += 'Eye movement right'
@@ -165,17 +163,13 @@ def simple_test(network, cues, stimuli, device):
                 print(output)
 
 
-def vague_test():
-    pass
-
-
 def main():
 
     # Hyperparameters
     BATCH_SIZE = 32
     LR = 0.002
     EPOCHS = 100
-    TRAINING = 0  # -1, training, 0 fine-tuning motor areas, 1 cue-stimuli matching test
+    TRAINING = 2  # -1, training, 0 fine-tuning motor areas, 1 cue-stimuli matching test, 2 other tests
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -189,17 +183,10 @@ def main():
     elif TRAINING == 0:
 
         # match the size of cues and stimuli by repeating
-        cue_labels = [next(itertools.cycle(cue_labels)) for _ in range(len(stimuli_labels))]
-        cues = np.array([next(itertools.cycle(cues)) for _ in range(stimuli.shape[0])])
-
-        # manual shuffling, as dataloader shuffling would not match cues and stimuli
-        # Incorrect! got 100% accuracy regardless though
-        '''shuffler = np.random.permutation(stimuli.shape[0])
-        cues = cues[shuffler, :, :]
-        stimuli = stimuli[shuffler, :, :]
-        for i in cue_labels[:]:
-            cue_labels[i] = cue_labels[shuffler[i]]
-            stimuli_labels[i] = stimuli_labels[shuffler[i]]'''
+        cycler = itertools.cycle(cue_labels)
+        cue_labels = [next(cycler) for _ in range(len(stimuli_labels))]
+        cycler = itertools.cycle(cues)
+        cues = np.array([next(cycler) for _ in range(stimuli.shape[0])])
 
         motor_labels = generate_motor_labels(cue_labels, stimuli_labels)
 
@@ -219,8 +206,15 @@ def main():
         simple_test(network, cues, stimuli, device)
 
     elif TRAINING == 2:
+
+        _, stimuli = generate_vague()
         cues, _ = generate_motor_test()
-        stimuli = generate_vague_stimuli()
+
+        network = ConvolutionalClassifier().to(device)
+        state_dict = torch.load('./conv.pth')
+        network.load_state_dict(state_dict)
+
+        simple_test(network, cues, stimuli, device)
 
 
 if __name__ == '__main__':

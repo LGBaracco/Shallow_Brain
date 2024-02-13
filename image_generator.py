@@ -97,7 +97,7 @@ def generate_motor_labels(cue_labels, stimuli_labels) -> List:
     return motor_labels
 
 
-def generate_motor_test():
+def generate_motor_test() -> (np.ndarray, np.ndarray):
     cues, _ = generate_cues()
     cues = np.array([cues[3, :, :], cues[-3, :, :]])
     stimuli, _ = generate_stimuli()
@@ -106,11 +106,29 @@ def generate_motor_test():
     return cues, stimuli
 
 
-def generate_vague_stimuli():
+def generate_vague() -> (np.ndarray, np.ndarray):
     stimuli = np.zeros((11, 16, 32))
+
+    cues = np.zeros((4, 16, 32))
+
+    cues[0, 6, 14] = 1.0
+    cues[0, 7, 15] = 1.0
+    cues[0, 8, 16] = 1.0
+
+    cues[1, 6, 16] = 1.0
+    cues[1, 7, 15] = 1.0
+    cues[1, 8, 14] = 1.0
+
+    cues[2, 8, 14] = 1.0
+    cues[2, 7, 15] = 1.0
+    cues[2, 6, 16] = 1.0
+
+    cues[3, 8, 16] = 1.0
+    cues[3, 7, 15] = 1.0
+    cues[3, 6, 14] = 1.0
 
     for i in range(10):
         stimuli[i, 6:10, 5:9] = i/10.0
         stimuli[i, 6:10, 23:27] = i/10.0
 
-    return stimuli
+    return cues, stimuli
