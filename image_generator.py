@@ -1,5 +1,6 @@
 from PIL import Image
 import itertools
+import random
 import numpy as np
 from typing import List
 import numpy.typing as npt
@@ -97,7 +98,36 @@ def generate_motor_labels(cue_labels, stimuli_labels) -> List:
     return motor_labels
 
 
-def generate_motor_test() -> (np.ndarray, np.ndarray):
+def generate_test_set() -> (npt.NDArray, List):
+    """Generate test set using stimuli with 2 decimal positions (training set only uses 1 decimal position)"""
+
+    stimuli = np.zeros((28, 16, 32))
+    labels = []
+
+    for i in range(28):
+
+        a = round(random.uniform(0, 1), 2)
+        b = round(random.uniform(0, 1), 2)
+
+        if a == b:
+            generate_test_set()  # restart generation in case stimuli are equal
+
+        if i % 2 == 0:
+
+            stimuli[i, 6:10, 5:9] = max(a, b)
+            stimuli[i, 6:10, 23:27] = min(a, b)
+
+            labels.append(0)
+        else:
+            stimuli[i, 6:10, 5:9] = min(a, b)
+            stimuli[i, 6:10, 23:27] = max(a, b)
+
+            labels.append(1)
+
+    return stimuli, labels
+
+
+def generate_sanity_check() -> (np.ndarray, np.ndarray):
     cues, _ = generate_cues()
     cues = np.array([cues[3, :, :], cues[-3, :, :]])
     stimuli, _ = generate_stimuli()
@@ -107,6 +137,8 @@ def generate_motor_test() -> (np.ndarray, np.ndarray):
 
 
 def generate_vague() -> (np.ndarray, np.ndarray):
+    """Generate ambiguous cues: 45° slanted bars in all four directions
+    Generate ambiguous stimuli: both boxes of perfectly equal brightness"""
     stimuli = np.zeros((11, 16, 32))
 
     cues = np.zeros((4, 16, 32))
@@ -126,6 +158,9 @@ def generate_vague() -> (np.ndarray, np.ndarray):
     cues[3, 8, 16] = 1.0
     cues[3, 7, 15] = 1.0
     cues[3, 6, 14] = 1.0
+
+    #plt.imshow(cues[1, :, :], cmap='gray')
+    #plt.show()
 
     for i in range(10):
         stimuli[i, 6:10, 5:9] = i/10.0
