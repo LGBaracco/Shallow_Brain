@@ -56,8 +56,6 @@ def test(network, cues, stimuli, brightness_labels, device):
     dataset = TensorDataset(cues, stimuli, brightness_labels)
     loader = DataLoader(dataset, batch_size=1, shuffle=False)
 
-    motor_outputs = []
-
     correct_brightness = 0
     total = 0
     correct_motor = 0
@@ -81,8 +79,6 @@ def test(network, cues, stimuli, brightness_labels, device):
             outputs = network(stimuli, cues)
             _, predicted = torch.max(outputs, 1)
             correct_motor += (predicted == motor_label).sum().item()
-            if predicted != motor_label:
-                motor_outputs.append(predicted[0])
 
     accuracy = 100 * correct_brightness / total
     print('brightness accuracy: ' + str(accuracy))

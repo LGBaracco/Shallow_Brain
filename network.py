@@ -2,8 +2,6 @@ import torch.nn as nn
 import torch
 
 
-# TODO: maybe get rid of logsoftmax (probably not)
-
 class MLPClassifier(nn.Module):
     def __init__(self):
         super(MLPClassifier, self).__init__()
@@ -30,8 +28,8 @@ class ConvolutionalClassifier(nn.Module):
         self.conv2 = nn.Conv2d(6, 12, 4)
         self.fc1 = nn.Linear(60, 4)  # identify stimuli
 
-        self.fc2 = nn.Linear(4, 8)
-        self.fc3 = nn.Linear(8, 2)  # Motor output with cue
+        self.fc2 = nn.Linear(4, 2)
+        self.fc3 = nn.Linear(2, 2)  # Motor output with cue
 
     def classifier(self, x):
 
@@ -42,7 +40,7 @@ class ConvolutionalClassifier(nn.Module):
         x = self.pool(torch.relu(self.conv1(x)))
         x = self.pool(torch.relu(self.conv2(x)))
         x = x.view(x.shape[0], -1)
-        x = torch.log_softmax(self.fc1(x), dim=1)
+        x = self.fc1(x)
 
         return x
 
@@ -54,8 +52,10 @@ class ConvolutionalClassifier(nn.Module):
             x = self.classifier(x)
             x[:, 2:4] = cue_labels[:, 2:4]
 
+            # x = torch.tensor([[9.9999, -9.9999, 9.9999, -9.9999]]).float().to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+
             x = torch.relu(self.fc2(x))
-            x = torch.log_softmax(self.fc3(x), dim=1)
+            x = self.fc3(x)
         else:
             x = self.classifier(x)
 

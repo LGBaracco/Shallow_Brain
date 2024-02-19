@@ -15,7 +15,7 @@ def training(data: npt.NDArray, labels: List, batch_size: int, lr: float, epochs
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
     network = ConvolutionalClassifier().to(device)
-    criterion = nn.NLLLoss()
+    criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(network.parameters(), lr=lr)
 
     for name, param in network.named_parameters():
@@ -72,7 +72,7 @@ def fine_tuning(network, cues, stimuli, labels, batch_size: int, lr: float, epoc
     stimuliset = TensorDataset(cues, stimuli, labels)
     stimuliloader = DataLoader(stimuliset, batch_size=batch_size, shuffle=True)
 
-    criterion = nn.NLLLoss()
+    criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(network.parameters(), lr=lr)
 
     for name, param in network.named_parameters():

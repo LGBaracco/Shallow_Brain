@@ -9,7 +9,6 @@ import torch
 
 # TODO:
 #  fabricate test with all outputs and see the issue
-#  generate test set using 2 decimals (n_test = n_training/4 = 28),
 #  test network bias with equal brightness training/test sets (left/right brightness ratio as a measure)
 #  test network bias with slanted cues and unequal training/test sets (prosaccade/antisaccade ratio as a measure)
 #  quantify brightness and motor output accuracy (all cases)
@@ -20,9 +19,9 @@ def main():
 
     # Hyperparameters
     BATCH_SIZE = 32
-    LR = 0.002
-    EPOCHS = 100
-    TRAINING = 3  # -1, training, 0 fine-tuning motor areas, 1 cue-stimuli matching test (sanity check), 2 other tests
+    LR = 0.0003
+    EPOCHS = 3000
+    TRAINING = 0  # -1, training, 0 fine-tuning motor areas, 1 sanity check, 2 other tests
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
