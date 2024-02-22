@@ -1,5 +1,4 @@
 from PIL import Image
-import itertools
 import random
 import numpy as np
 from typing import List
@@ -31,8 +30,8 @@ def generate_stimuli() -> (npt.NDArray, List):
 
             index += 1
 
-    #img = Image.fromarray(np.uint8(images[:,:,25] * 255))
-    #img.show()
+    # img = Image.fromarray(np.uint8(images[:,:,25] * 255))
+    # img.show()
 
     return images, labels
 
@@ -57,9 +56,6 @@ def generate_cues() -> (npt.NDArray, List):
             images[index, 6 + i, 14 + j:17 + j] = 1.0
 
             index += 1
-
-    #img = Image.fromarray(np.uint8(images[10,:,:] * 255))
-    #img.show()
 
     return images, labels
 
@@ -159,8 +155,8 @@ def generate_vague() -> (np.ndarray, np.ndarray):
     cues[3, 7, 15] = 1.0
     cues[3, 6, 14] = 1.0
 
-    #plt.imshow(cues[1, :, :], cmap='gray')
-    #plt.show()
+    # plt.imshow(cues[1, :, :], cmap='gray')
+    # plt.show()
 
     for i in range(10):
         stimuli[i, 6:10, 5:9] = i/10.0

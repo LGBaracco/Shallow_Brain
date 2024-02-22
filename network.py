@@ -3,6 +3,7 @@ import torch
 
 
 class MLPClassifier(nn.Module):
+    """MLP classifier, probably not useful anymore"""
     def __init__(self):
         super(MLPClassifier, self).__init__()
 
@@ -28,8 +29,8 @@ class ConvolutionalClassifier(nn.Module):
         self.conv2 = nn.Conv2d(6, 12, 4)
         self.fc1 = nn.Linear(60, 4)  # identify stimuli
 
-        self.fc2 = nn.Linear(4, 2)
-        self.fc3 = nn.Linear(2, 2)  # Motor output with cue
+        self.fc2 = nn.Linear(2, 8)
+        self.fc3 = nn.Linear(8, 2)  # Motor output with cue
 
     def classifier(self, x):
 
@@ -47,12 +48,18 @@ class ConvolutionalClassifier(nn.Module):
     def forward(self, x, cue=None):
 
         if cue is not None:
-            cue_labels = self.classifier(cue)
 
-            x = self.classifier(x)
-            x[:, 2:4] = cue_labels[:, 2:4]
+            cue_outputs = self.classifier(cue)
+            _, cues = torch.max(cue_outputs, 1)
+            cues = cues.unsqueeze(1)
 
-            # x = torch.tensor([[9.9999, -9.9999, 9.9999, -9.9999]]).float().to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+            stimuli_outputs = self.classifier(x)
+            _, stimuli = torch.max(stimuli_outputs, 1)
+            stimuli = stimuli.unsqueeze(1)
+
+            x = torch.cat([stimuli, cues], dim=1).float()
+
+            # x[:, 2:4] = cue_labels[:, 2:4]
 
             x = torch.relu(self.fc2(x))
             x = self.fc3(x)

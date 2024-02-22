@@ -60,6 +60,8 @@ def training(data: npt.NDArray, labels: List, batch_size: int, lr: float, epochs
         torch.save(network.state_dict(), './mlp.pth')
         print('saved!')
 
+    return network
+
 
 def fine_tuning(network, cues, stimuli, labels, batch_size: int, lr: float, epochs: int, device: torch.device):
     """Train motor layer (stimulus with cue)"""
@@ -87,7 +89,7 @@ def fine_tuning(network, cues, stimuli, labels, batch_size: int, lr: float, epoc
             optimizer.zero_grad()
 
             log_ps = network(stimuli, cues)
-
+    
             loss = criterion(log_ps, labels)
 
             loss.backward()
