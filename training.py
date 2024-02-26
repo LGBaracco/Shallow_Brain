@@ -34,7 +34,8 @@ def training(data: npt.NDArray, labels: List, batch_size: int, lr: float, epochs
             optimizer.step()
 
             running_loss += loss.item()
-        print(f"Epoch #{epoch+1} Training loss: {running_loss / len(dataloader)}")
+        if epoch % 10 == 0:
+            print(f"Epoch #{epoch+1} Training loss: {running_loss / len(dataloader)}")
 
     # accuracy
     correct = 0
@@ -50,21 +51,20 @@ def training(data: npt.NDArray, labels: List, batch_size: int, lr: float, epochs
     accuracy = 100 * correct / total
     print('accuracy: ' + str(accuracy))
 
-    if accuracy != 100.0:
-        return  # Do not save model if accuracy is not 100%
-
-    if type(network) is ConvolutionalClassifier:
+    # Do not save model if accuracy is not 100%
+    if type(network) is ConvolutionalClassifier and accuracy == 100.0:
         torch.save(network.state_dict(), './conv.pth')
         print('saved!')
-    elif type(network) is MLPClassifier:
+    elif type(network) is MLPClassifier and accuracy == 100.0:
         torch.save(network.state_dict(), './mlp.pth')
         print('saved!')
 
-    return network
+    return network, accuracy
 
 
-def fine_tuning(network, cues, stimuli, labels, batch_size: int, lr: float, epochs: int, device: torch.device):
-    """Train motor layer (stimulus with cue)"""
+def fine_tuning(network, cues, stimuli, labels, batch_size: int, lr: float, epochs: int, device: torch.device) \
+        -> (torch.nn.Module, float):
+    """Train motor layer (stimuli with cue)"""
 
     network = network.to(device)
     cues = torch.from_numpy(cues).float().to(device)
@@ -96,7 +96,8 @@ def fine_tuning(network, cues, stimuli, labels, batch_size: int, lr: float, epoc
             optimizer.step()
 
             running_loss += loss.item()
-        print(f"Epoch #{epoch+1} Training loss: {running_loss / len(stimuliloader)}")
+        if epoch % 10 == 0:
+            print(f"Epoch #{epoch+1} Training loss: {running_loss / len(stimuliloader)}")
 
     # accuracy
     correct = 0
@@ -111,12 +112,11 @@ def fine_tuning(network, cues, stimuli, labels, batch_size: int, lr: float, epoc
     accuracy = 100 * correct / total
     print('accuracy: ' + str(accuracy))
 
-    if accuracy != 100.0:
-        return  # Do not save model if accuracy is not 100%
-
-    if type(network) is ConvolutionalClassifier:
+    if type(network) is ConvolutionalClassifier and accuracy == 100.0:
         torch.save(network.state_dict(), './conv.pth')
         print('saved!')
-    elif type(network) is MLPClassifier:
+    elif type(network) is MLPClassifier and accuracy == 100.0:
         torch.save(network.state_dict(), './mlp.pth')
         print('saved!')
+
+    return network, accuracy

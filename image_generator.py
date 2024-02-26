@@ -158,8 +158,19 @@ def generate_vague() -> (np.ndarray, np.ndarray):
     # plt.imshow(cues[1, :, :], cmap='gray')
     # plt.show()
 
-    for i in range(10):
+    for i in range(11):
         stimuli[i, 6:10, 5:9] = i/10.0
         stimuli[i, 6:10, 23:27] = i/10.0
+
+    for i, cue in enumerate(cues):
+        plt.imshow(cue, cmap='gray')
+        filename = 'Pictures/vague_stimuli_cues/cue_' + str(i)
+        plt.savefig(filename)
+        plt.clf()
+    for i, stimulus in enumerate(stimuli):
+        plt.imshow(stimulus, cmap='gray')
+        filename = 'Pictures/vague_stimuli_cues/stimulus_' + str(i)
+        plt.savefig(filename)
+        plt.clf()
 
     return cues, stimuli

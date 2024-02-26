@@ -46,7 +46,7 @@ def simple_test(network, cues, stimuli, device):
 
 
 @torch.no_grad()
-def test_vague(network, slanted_cues, equal_stimuli, device) -> None:
+def test_vague(network, slanted_cues, equal_stimuli, device) -> (float, float):
     """Test two different types of ambiguous input:
         slanted bars instead of cues and stimulus pairs of equal brightness
         outputs are respectively prosaccade/antisaccade ratio and left/right ratio"""
@@ -73,8 +73,9 @@ def test_vague(network, slanted_cues, equal_stimuli, device) -> None:
 
     stimuli_dataset = TensorDataset(equal_stimuli)
     stimuli_loader = DataLoader(stimuli_dataset, batch_size=1, shuffle=False)
-    left_detection = 0  # also arbitrary
+    left_detection = 0  # also arbitrary (as opposed to right)
     total = 0
+    predicted_stimulis = []
     for stimuli in stimuli_loader:
 
         outputs = network(stimuli)
@@ -82,13 +83,16 @@ def test_vague(network, slanted_cues, equal_stimuli, device) -> None:
 
         total += predicted_stimuli.size(0)
         left_detection += (predicted_stimuli == 0).sum().item()
+        predicted_stimulis.append(predicted_stimuli.item())
 
     stimuli_ratio = 100 * left_detection / total
     print('Left-detection ratio: ' + str(stimuli_ratio))
 
+    return cue_ratio, stimuli_ratio, predicted_stimulis
+
 
 @torch.no_grad()
-def test(network, cues, stimuli, brightness_labels, device):
+def test(network, cues, stimuli, brightness_labels, device) -> (float, float):
     """Test both the classification accuracy of both the stimuli and motor response using test set stimuli"""
 
     network = network.to(device)
@@ -96,37 +100,42 @@ def test(network, cues, stimuli, brightness_labels, device):
     stimuli = torch.from_numpy(stimuli).float().to(device)
     brightness_labels = torch.tensor(brightness_labels).float().to(device)
 
-    dataset = TensorDataset(cues, stimuli, brightness_labels)
-    loader = DataLoader(dataset, batch_size=1, shuffle=False)
+    stimuli_dataset = TensorDataset(stimuli, brightness_labels)
+    stimuli_loader = DataLoader(stimuli_dataset, batch_size=1, shuffle=False)
+    cue_dataset = TensorDataset(cues)
+    cue_loader = DataLoader(cue_dataset, batch_size=1, shuffle=False)
 
     correct_brightness = 0
     total = 0
     correct_motor = 0
 
-    for cues, stimuli, brightness_label in loader:
+    for stimuli, brightness_label in stimuli_loader:
+        for cues in cue_loader:
 
-        # Classify stimuli
-        outputs = network(stimuli)
-        _, predicted_stimulus = torch.max(outputs, 1)
-        total += brightness_label.size(0)
-        correct_brightness += (predicted_stimulus == brightness_label).sum().item()
+            # Classify stimuli
+            outputs = network(stimuli)
+            _, predicted_stimulus = torch.max(outputs, 1)
+            total += brightness_label.size(0)
+            correct_brightness += (predicted_stimulus == brightness_label).sum().item()
 
-        # generate motor label
-        outputs = network(cues)
-        _, cue_label = torch.max(outputs, 1)
-        if (cue_label == 3) ^ (brightness_label == 1):  # the cue/label match is an XOR
-            motor_label = torch.tensor(1)
-        else:
-            motor_label = torch.tensor(0)
+            # generate motor label
+            outputs = network(cues)
+            _, cue_label = torch.max(outputs, 1)
+            if (cue_label == 3) ^ (brightness_label == 1):  # the cue/label match is an XOR
+                motor_label = torch.tensor(1)
+            else:
+                motor_label = torch.tensor(0)
 
-        outputs = network(stimuli, cues)
-        _, predicted = torch.max(outputs, 1)
-        correct_motor += (predicted == motor_label).sum().item()
+            outputs = network(stimuli, cues)
+            _, predicted = torch.max(outputs, 1)
+            correct_motor += (predicted == motor_label).sum().item()
 
-    accuracy = 100 * correct_brightness / total
-    print('brightness accuracy: ' + str(accuracy))
-    accuracy = 100 * correct_motor / total
-    print('motor accuracy: ' + str(accuracy))
+    brightness_accuracy = 100 * correct_brightness / total
+    print('brightness accuracy: ' + str(brightness_accuracy))
+    motor_accuracy = 100 * correct_motor / total
+    print('motor accuracy: ' + str(motor_accuracy))
+
+    return brightness_accuracy, motor_accuracy
 
 
 def get_outputs(network, cues, stimuli):
