@@ -24,13 +24,13 @@ class ConvolutionalClassifier(nn.Module):
     def __init__(self):
         super(ConvolutionalClassifier, self).__init__()
 
-        self.conv1 = nn.Conv2d(1, 6, 4)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 12, 4)
-        self.fc1 = nn.Linear(60, 4)  # identify stimuli
+        self.conv1 = nn.Conv2d(1, 4, 4)
+        self.pool = nn.MaxPool2d(3, 2)
+        self.conv2 = nn.Conv2d(4, 6, 4)
+        self.fc1 = nn.Linear(30, 4)  # identify stimuli
 
-        self.fc2 = nn.Linear(2, 8)
-        self.fc3 = nn.Linear(8, 2)  # Motor output with cue
+        self.fc2 = nn.Linear(2, 32)
+        self.fc3 = nn.Linear(32, 2)  # Motor output with cue
 
     def classifier(self, x):
 

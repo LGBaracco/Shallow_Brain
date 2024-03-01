@@ -1,4 +1,6 @@
-from network import *
+from cortex import *
+from subcortex import *
+from utilfuncs import *
 from typing import List
 import numpy.typing as npt
 import torch
@@ -6,7 +8,8 @@ from torch import nn, optim
 from torch.utils.data import TensorDataset, DataLoader
 
 
-def training(data: npt.NDArray, labels: List, batch_size: int, lr: float, epochs: int, device: torch.device):
+def training(data: npt.NDArray, labels: List, batch_size: int, lr: float, epochs: int, device: torch.device) \
+        -> (torch.nn.Module, float):
     """Train single stimuli or cues classifier (either MLP or convolutional)"""
 
     data = torch.from_numpy(data).float().to(device)
@@ -52,11 +55,8 @@ def training(data: npt.NDArray, labels: List, batch_size: int, lr: float, epochs
     print('accuracy: ' + str(accuracy))
 
     # Do not save model if accuracy is not 100%
-    if type(network) is ConvolutionalClassifier and accuracy == 100.0:
+    if accuracy == 100.0:
         torch.save(network.state_dict(), './conv.pth')
-        print('saved!')
-    elif type(network) is MLPClassifier and accuracy == 100.0:
-        torch.save(network.state_dict(), './mlp.pth')
         print('saved!')
 
     return network, accuracy
@@ -71,8 +71,8 @@ def fine_tuning(network, cues, stimuli, labels, batch_size: int, lr: float, epoc
     stimuli = torch.from_numpy(stimuli).float().to(device)
     labels = torch.tensor(labels).to(device)
 
-    stimuliset = TensorDataset(cues, stimuli, labels)
-    stimuliloader = DataLoader(stimuliset, batch_size=batch_size, shuffle=True)
+    stimuli_set = TensorDataset(cues, stimuli, labels)
+    stimuli_loader = DataLoader(stimuli_set, batch_size=batch_size, shuffle=True)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(network.parameters(), lr=lr)
@@ -85,7 +85,7 @@ def fine_tuning(network, cues, stimuli, labels, batch_size: int, lr: float, epoc
 
     for epoch in range(epochs):
         running_loss = 0
-        for cues, stimuli, labels in stimuliloader:
+        for cues, stimuli, labels in stimuli_loader:
             optimizer.zero_grad()
 
             log_ps = network(stimuli, cues)
@@ -97,13 +97,13 @@ def fine_tuning(network, cues, stimuli, labels, batch_size: int, lr: float, epoc
 
             running_loss += loss.item()
         if epoch % 10 == 0:
-            print(f"Epoch #{epoch+1} Training loss: {running_loss / len(stimuliloader)}")
+            print(f"Epoch #{epoch+1} Training loss: {running_loss / len(stimuli_loader)}")
 
     # accuracy
     correct = 0
     total = 0
     with torch.no_grad():
-        for cues, stimuli, labels in stimuliloader:
+        for cues, stimuli, labels in stimuli_loader:
             outputs = network(stimuli, cues)
             _, predicted = torch.max(outputs, 1)
             total += labels.size(0)
@@ -112,11 +112,56 @@ def fine_tuning(network, cues, stimuli, labels, batch_size: int, lr: float, epoc
     accuracy = 100 * correct / total
     print('accuracy: ' + str(accuracy))
 
-    if type(network) is ConvolutionalClassifier and accuracy == 100.0:
+    if accuracy == 100.0:
         torch.save(network.state_dict(), './conv.pth')
         print('saved!')
-    elif type(network) is MLPClassifier and accuracy == 100.0:
-        torch.save(network.state_dict(), './mlp.pth')
+
+    return network, accuracy
+
+
+def train_subcortex(data: npt.NDArray, labels: List, batch_size: int, lr: float, epochs: int, device: torch.device):
+    """Train MLP implementation of subcortical pathway"""
+
+    data = torch.from_numpy(data).float().to(device)
+    labels = torch.tensor(labels).to(device)
+    dataset = TensorDataset(data, labels)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+    network = SubcortexMLP().to(device)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(network.parameters(), lr=lr)
+
+    for epoch in range(epochs):
+        running_loss = 0
+        for images, labels in dataloader:
+            optimizer.zero_grad()
+
+            log_ps = network(images)
+
+            loss = criterion(log_ps, labels)
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item()
+        print(f"Epoch #{epoch+1} Training loss: {running_loss / len(dataloader)}")
+
+    # accuracy
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for images, labels in dataloader:
+
+            outputs = network(images)
+            _, predicted = torch.max(outputs, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+    accuracy = 100 * correct / total
+    print('accuracy: ' + str(accuracy))
+
+    # Do not save model if accuracy is not 100%
+    if accuracy == 100.0:
+        torch.save(network.state_dict(), './subc.pth')
         print('saved!')
 
     return network, accuracy

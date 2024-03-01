@@ -100,7 +100,7 @@ def generate_test_set() -> (npt.NDArray, List):
     stimuli = np.zeros((28, 16, 32))
     labels = []
 
-    for i in range(28):
+    for i in range(28):  # arbitrary number
 
         a = round(random.uniform(0, 1), 2)
         b = round(random.uniform(0, 1), 2)
@@ -162,7 +162,7 @@ def generate_vague() -> (np.ndarray, np.ndarray):
         stimuli[i, 6:10, 5:9] = i/10.0
         stimuli[i, 6:10, 23:27] = i/10.0
 
-    for i, cue in enumerate(cues):
+    '''for i, cue in enumerate(cues):
         plt.imshow(cue, cmap='gray')
         filename = 'Pictures/vague_stimuli_cues/cue_' + str(i)
         plt.savefig(filename)
@@ -171,6 +171,6 @@ def generate_vague() -> (np.ndarray, np.ndarray):
         plt.imshow(stimulus, cmap='gray')
         filename = 'Pictures/vague_stimuli_cues/stimulus_' + str(i)
         plt.savefig(filename)
-        plt.clf()
+        plt.clf()'''
 
     return cues, stimuli

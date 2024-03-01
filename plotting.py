@@ -7,10 +7,14 @@ def plot_accuracy(measures, view=False, save=True):
     means = np.mean(measures, axis=0)
     std_devs = np.std(measures, axis=0)
 
-    labels = np.array(['Classification training accuracy', 'Motor training accuracy',
-                       'Classification test accuracy', 'Motor test accuracy'])  # 'Prosaccade ratio (slanted cues)', 'Left ratio (equal brightness)'
-
-    colors = ['blue', 'blue', 'green', 'green']
+    labels = np.array(['Classification training accuracy', 'Motor training accuracy'])  # 'Prosaccade ratio (slanted cues)', 'Left ratio (equal brightness)'
+    colors = ['blue', 'blue']
+    if measures.shape[1] == 3:
+        labels = np.append(labels, 'Classification test accuracy')
+        colors = np.append(colors, 'green')
+        filename = 'Pictures/accuracy_cortex'
+    else:
+        filename = 'Pictures/accuracy_subcortex'
 
     plt.bar(labels, means, yerr=std_devs, align='center', alpha=0.5, ecolor='black', capsize=10, color=colors)
     plt.ylim(bottom=0, top=105)
@@ -21,7 +25,7 @@ def plot_accuracy(measures, view=False, save=True):
     plt.tight_layout()
 
     if save:
-        plt.savefig('Pictures/accuracy')
+        plt.savefig(filename)
     if view:
         plt.show()
 
@@ -33,7 +37,13 @@ def plot_ratio(measures, view=False, save=True):
     means = np.mean(measures, axis=0)
     std_devs = np.std(measures, axis=0)
 
-    labels = np.array(['Prosaccade ratio (slanted cues)', 'Left ratio (equal brightness)'])  #
+    labels = np.array(['Left ratio (equal brightness)'])
+
+    if measures.shape[1] == 2:
+        labels = np.insert(labels, 0, 'Prosaccade ratio (slanted cues)')
+        filename = 'Pictures/vague_ratio_cortex'
+    else:
+        filename = 'Pictures/vague_ratio_subcortex'
 
     plt.bar(labels, means, yerr=std_devs, align='center', ecolor='black', alpha=0.5, capsize=10)
     plt.ylim(bottom=0, top=100)
@@ -44,14 +54,14 @@ def plot_ratio(measures, view=False, save=True):
     plt.tight_layout()
 
     if save:
-        plt.savefig('Pictures/vague_ratio')
+        plt.savefig(filename)
     if view:
         plt.show()
 
     plt.clf()
 
 
-def plot_equal_brightness(measures, view=False, save=True):
+def plot_equal_brightness(measures, view=False, save=True, subcortex=False):
 
     values = np.sum(measures == 0, axis=0)
     values = 100 * values / measures.shape[0]
@@ -65,7 +75,12 @@ def plot_equal_brightness(measures, view=False, save=True):
     plt.tight_layout()
 
     if save:
-        plt.savefig('Pictures/ratio_equal_brightness')
+        if subcortex:
+            filename = 'Pictures/ratio_equal_brightness_subcortex'
+        else:
+            filename = 'Pictures/ratio_equal_brightness_cortex'
+
+        plt.savefig(filename)
     if view:
         plt.show()
 
