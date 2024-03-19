@@ -77,7 +77,7 @@ def interleave(cues, cue_labels, stimuli, stimuli_labels) -> (npt.NDArray, List)
     return images, labels
 
 
-def generate_motor_labels(cue_labels, stimuli_labels) -> List:
+def generate_motor_labels(cue_labels, stimuli_labels) -> List:  # TODO: move this into utilfuncs
 
     motor_labels = []
     for cue_label, stimulus_label in zip(cue_labels, stimuli_labels):

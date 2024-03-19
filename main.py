@@ -4,15 +4,12 @@ import numpy as np
 from image_generator import *
 from utilfuncs import *
 from cortex import *
+from subcortex import *
+from brain import *
 from training import *
 from testing import *
 from plotting import *
 import torch
-
-# TODO:
-#  connect cortex and subcortex
-#  Idea: use argmax over all 4 outputs, so that inhibitory neuron actually works
-#  Try Wong-Wang?
 
 
 def main():
@@ -21,8 +18,10 @@ def main():
     ITERATIONS = 30
     BATCH_SIZE = 32
     LR = 0.003
-    EPOCHS = 110
-    TRAINING = 5  # -1 training subcortex 0 training cortex, 1 sanity check, 2 and 3 training/testing subcort and cort, 4 and 5 plotting subcort and cort
+    EPOCHS = 150
+    # -1 training subcortex 0 training cortex, 1 sanity check, 2 and 3 training/testing subcort and cort, 4 and 5 plotting subcort and cort,
+    # 6 test full brain, 7 step-wise analysis
+    TRAINING = 7
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -40,7 +39,7 @@ def main():
         data = np.concatenate((cues, stimuli), axis=0)
         labels = cue_labels + stimuli_labels
 
-        network = training(data, labels, BATCH_SIZE, LR, EPOCHS, device)
+        network, _ = training(data, labels, BATCH_SIZE, LR, EPOCHS, device)
         if network is None:
             main()  # Restart in case accuracy is not 100%
 
@@ -121,9 +120,9 @@ def main():
     elif TRAINING == 4:
         measures = np.load('measures_subcortex.npy')
         brightnesses = np.load('brightnesses_subcortex.npy')
-        plot_accuracy(measures[:, :2], True, True)
-        plot_ratio(measures[:, 2:], True, True)
-        plot_equal_brightness(brightnesses, True, True, True)
+        plot_accuracy(measures[:, :2], True, False)
+        plot_ratio(measures[:, 2:], True, False)
+        plot_equal_brightness(brightnesses, True, False, True)
 
     elif TRAINING == 5:
         measures = np.load('measures.npy')
@@ -131,6 +130,41 @@ def main():
         plot_accuracy(measures[:, :3], True, True)
         plot_ratio(measures[:, 3:], True, True)
         plot_equal_brightness(brightnesses, True, True, False)
+
+    elif TRAINING == 6:
+
+        cortex = ConvolutionalClassifier().to(device)
+        state_dict = torch.load('./conv.pth')
+        cortex.load_state_dict(state_dict)
+        subcortex = SubcortexMLP().to(device)
+        state_dict = torch.load('./subc.pth')
+        subcortex.load_state_dict(state_dict)
+
+        network = ANNBrain(cortex, subcortex)
+
+        accuracy, ratio = test_brain(network, cues, cue_labels, stimuli, stimuli_labels, device)
+
+        measures = np.array([accuracy, ratio])
+
+        plot_brain(measures, False, False)
+
+    elif TRAINING == 7:
+
+        cortex = ConvolutionalClassifier().to(device)
+        state_dict = torch.load('./conv.pth')
+        cortex.load_state_dict(state_dict)
+        subcortex = SubcortexMLP().to(device)
+        state_dict = torch.load('./subc.pth')
+        subcortex.load_state_dict(state_dict)
+
+        network = ANNBrain(cortex, subcortex)
+
+        accuracy, measures = test_step_wise(network, cues, cue_labels, stimuli, stimuli_labels, device)
+
+        print(accuracy, measures)
+        plot_heatmap(measures, True, True)
+
+        # plot_brain(measures, False, False)
 
 
 def fine_tune_network(cues, cue_labels, stimuli, stimuli_labels, network, batch_size, lr, epochs, device):

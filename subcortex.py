@@ -31,7 +31,7 @@ class SubcortexMLP(nn.Module):
         super(SubcortexMLP, self).__init__()
 
         self.fc1 = nn.Linear(2, 16)
-        self.fc2 = nn.Linear(16, 2)
+        self.fc2 = nn.Linear(16, 2, bias=False)
 
     def forward(self, x):
         while type(x) is list:  # dirty trick: not yet sure why it's necessary
@@ -39,6 +39,16 @@ class SubcortexMLP(nn.Module):
 
         x = stimuli_extractor(x).to(next(self.parameters()).device)
         x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
+        x = torch.log_softmax(self.fc2(x), dim=1)
 
         return x
+
+    def ahead(self, x, t):
+
+        match t:
+            case 0:
+                return stimuli_extractor(x).to(next(self.parameters()).device)
+            case 1:
+                return torch.relu(self.fc1(x))
+            case 2:
+                return torch.log_softmax(self.fc2(x), dim=1)

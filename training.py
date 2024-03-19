@@ -18,7 +18,7 @@ def training(data: npt.NDArray, labels: List, batch_size: int, lr: float, epochs
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
     network = ConvolutionalClassifier().to(device)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.NLLLoss()
     optimizer = optim.Adam(network.parameters(), lr=lr)
 
     for name, param in network.named_parameters():
@@ -54,11 +54,6 @@ def training(data: npt.NDArray, labels: List, batch_size: int, lr: float, epochs
     accuracy = 100 * correct / total
     print('accuracy: ' + str(accuracy))
 
-    # Do not save model if accuracy is not 100%
-    if accuracy == 100.0:
-        torch.save(network.state_dict(), './conv.pth')
-        print('saved!')
-
     return network, accuracy
 
 
@@ -74,7 +69,7 @@ def fine_tuning(network, cues, stimuli, labels, batch_size: int, lr: float, epoc
     stimuli_set = TensorDataset(cues, stimuli, labels)
     stimuli_loader = DataLoader(stimuli_set, batch_size=batch_size, shuffle=True)
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.NLLLoss()
     optimizer = optim.Adam(network.parameters(), lr=lr)
 
     for name, param in network.named_parameters():
@@ -128,7 +123,7 @@ def train_subcortex(data: npt.NDArray, labels: List, batch_size: int, lr: float,
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
     network = SubcortexMLP().to(device)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.NLLLoss()
     optimizer = optim.Adam(network.parameters(), lr=lr)
 
     for epoch in range(epochs):

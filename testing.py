@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import TensorDataset, DataLoader
+from utilfuncs import *
 
 
 def simple_test(network, cues, stimuli, device):
@@ -133,6 +134,50 @@ def test_vague_stimuli(network, equal_stimuli, device) -> (float, float):
     return stimuli_ratio, predicted_stimulis
 
 
+@torch.no_grad()
+def test_brain(network, cues, cue_labels, stimuli, stimuli_labels, device):
+    """Testing the whole network combining cortex and subcortex. Check classification accuracy (should be 100%), and subcortex ratio"""
+    network = network.to(device)
+
+    cues = torch.from_numpy(cues).float().to(device)
+    cue_labels = torch.tensor(cue_labels).to(device)
+    stimuli = torch.from_numpy(stimuli).float().to(device)
+    stimuli_labels = torch.tensor(stimuli_labels).to(device)
+
+    cue_set = TensorDataset(cues, cue_labels)
+    cue_loader = DataLoader(cue_set, batch_size=1, shuffle=False)
+    stimuli_set = TensorDataset(stimuli, stimuli_labels)
+    stimuli_loader = DataLoader(stimuli_set, batch_size=1, shuffle=False)
+
+    correct_classified = 0
+    total = 0
+    total_subcortex = 0
+    used_subcortex = 0
+    for cue, cue_label in cue_loader:
+        for stimulus, stimulus_label in stimuli_loader:
+
+            value = network(stimulus, cue)
+            _, predicted = torch.max(value, 1)
+
+            labels = get_possible_labels(cue_label, stimulus_label)
+
+            total += predicted.size(0)
+            correct_classified += 1 if predicted in labels else 0
+
+            if cue_label == 2:
+                total_subcortex += predicted.size(0)
+                if predicted.item() > 1:
+                    used_subcortex += predicted.size(0)
+
+    classification_accuracy = 100 * correct_classified / total
+    subcortex_ratio = 100 * used_subcortex / total_subcortex
+
+    print('Classification accuracy: ' + str(classification_accuracy))
+    print('Subcortex ratio: ' + str(subcortex_ratio))
+
+    return classification_accuracy, subcortex_ratio
+
+
 def get_outputs(network, cues, stimuli):
     outputs = network(cues)
     _, predicted_cues = torch.max(outputs, 1)
@@ -144,3 +189,42 @@ def get_outputs(network, cues, stimuli):
     _, predicted_motor = torch.max(outputs, 1)
 
     return predicted_cues, predicted_stimulus, predicted_motor
+
+
+@torch.no_grad()
+def test_step_wise(network, cues, cue_labels, stimuli, stimuli_labels, device):
+    """Testing the whole network combining cortex and subcortex using a time component."""
+    network = network.to(device)
+
+    cues = torch.from_numpy(cues).float().to(device)
+    cue_labels = torch.tensor(cue_labels).to(device)
+    stimuli = torch.from_numpy(stimuli).float().to(device)
+    stimuli_labels = torch.tensor(stimuli_labels).to(device)
+
+    cue_set = TensorDataset(cues, cue_labels)
+    cue_loader = DataLoader(cue_set, batch_size=1, shuffle=False)
+    stimuli_set = TensorDataset(stimuli, stimuli_labels)
+    stimuli_loader = DataLoader(stimuli_set, batch_size=1, shuffle=False)
+
+    correct_classified = 0
+    total = 0
+    measures = torch.zeros((len(stimuli_set)*len(cue_set), 7, 4))
+    for cue, cue_label in cue_loader:
+        for stimulus, stimulus_label in stimuli_loader:
+
+            value = network.forward_step(stimulus, cue)
+            _, predicted = torch.max(value[-1, :], 0)
+            measures[total, :, :] = value
+
+            labels = get_possible_labels(cue_label, stimulus_label)
+
+            total += 1
+            correct_classified += 1 if predicted in labels else 0
+
+    classification_accuracy = 100 * correct_classified / total
+
+    print('Classification accuracy: ' + str(classification_accuracy))
+
+    return classification_accuracy, measures
+
+
