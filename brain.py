@@ -25,9 +25,9 @@ class ANNBrain(nn.Module):
 
         x_cortex = self.cortex(x, cue)
 
-        x = torch.cat([x_cortex, x_subcortex], dim=1)
+        # x = torch.cat([x_cortex, x_subcortex], dim=1)
 
-        return x
+        return x_subcortex + x_cortex
 
     def forward_step(self, x, cue=None):
         while type(x) is list:  # dirty trick: not yet sure why it's necessary (might be due to 1-n batches)

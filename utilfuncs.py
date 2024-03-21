@@ -1,4 +1,5 @@
 import torch
+from typing import List
 
 
 def stimuli_extractor(batch):
@@ -26,3 +27,20 @@ def get_possible_labels(cue_label, stimulus_label):
             motor_label = [0]
 
     return motor_label
+
+
+def generate_motor_labels(cue_labels, stimuli_labels) -> List:
+
+    motor_labels = []
+    for cue_label, stimulus_label in zip(cue_labels, stimuli_labels):
+        match (cue_label, stimulus_label):
+            case (2, 0):  # PS, left brighter: left
+                motor_labels.append(0)
+            case (2, 1):  # PS, right brighter: right
+                motor_labels.append(1)
+            case (3, 0):  # AS, left brighter: right
+                motor_labels.append(1)
+            case (3, 1):  # AS, right brighter: left
+                motor_labels.append(0)
+
+    return motor_labels

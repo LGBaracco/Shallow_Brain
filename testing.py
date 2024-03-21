@@ -164,18 +164,11 @@ def test_brain(network, cues, cue_labels, stimuli, stimuli_labels, device):
             total += predicted.size(0)
             correct_classified += 1 if predicted in labels else 0
 
-            if cue_label == 2:
-                total_subcortex += predicted.size(0)
-                if predicted.item() > 1:
-                    used_subcortex += predicted.size(0)
-
     classification_accuracy = 100 * correct_classified / total
-    subcortex_ratio = 100 * used_subcortex / total_subcortex
 
     print('Classification accuracy: ' + str(classification_accuracy))
-    print('Subcortex ratio: ' + str(subcortex_ratio))
 
-    return classification_accuracy, subcortex_ratio
+    return classification_accuracy
 
 
 def get_outputs(network, cues, stimuli):

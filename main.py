@@ -21,7 +21,7 @@ def main():
     EPOCHS = 150
     # -1 training subcortex 0 training cortex, 1 sanity check, 2 and 3 training/testing subcort and cort, 4 and 5 plotting subcort and cort,
     # 6 test full brain, 7 step-wise analysis
-    TRAINING = 7
+    TRAINING = 4
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -120,9 +120,9 @@ def main():
     elif TRAINING == 4:
         measures = np.load('measures_subcortex.npy')
         brightnesses = np.load('brightnesses_subcortex.npy')
-        plot_accuracy(measures[:, :2], True, False)
-        plot_ratio(measures[:, 2:], True, False)
-        plot_equal_brightness(brightnesses, True, False, True)
+        plot_accuracy(measures[:, :2], True, True)
+        plot_ratio(measures[:, 2:], True, True)
+        plot_equal_brightness(brightnesses, True, True, True)
 
     elif TRAINING == 5:
         measures = np.load('measures.npy')
@@ -142,11 +142,10 @@ def main():
 
         network = ANNBrain(cortex, subcortex)
 
-        accuracy, ratio = test_brain(network, cues, cue_labels, stimuli, stimuli_labels, device)
+        accuracy = test_brain(network, cues, cue_labels, stimuli, stimuli_labels, device)
+        print(accuracy)
 
-        measures = np.array([accuracy, ratio])
-
-        plot_brain(measures, False, False)
+        # plot_brain(measures, False, False) Deprecated: plots subcortex ratio when outputs are concatenated
 
     elif TRAINING == 7:
 
