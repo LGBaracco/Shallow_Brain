@@ -11,6 +11,9 @@ from testing import *
 from plotting import *
 import torch
 
+# TODO: ct-cortex
+#       Later: negativeness of activations, argmaxxing??
+
 
 def main():
 
@@ -20,8 +23,8 @@ def main():
     LR = 0.003
     EPOCHS = 150
     # -1 training subcortex 0 training cortex, 1 sanity check, 2 and 3 training/testing subcort and cort, 4 and 5 plotting subcort and cort,
-    # 6 test full brain, 7 step-wise analysis
-    TRAINING = 4
+    # 6 test full brain, 7 step-wise analysis, 8 continuous analysis
+    TRAINING = 8
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -164,6 +167,18 @@ def main():
         plot_heatmap(measures, True, True)
 
         # plot_brain(measures, False, False)
+
+    elif TRAINING == 8:
+        network = SubcortexMLP().to(device)
+        state_dict = torch.load('./subc.pth')
+        network.load_state_dict(state_dict)
+
+        data = torch.from_numpy(stimuli).float().to(torch.device('cuda'))
+        result = network(data[0:1, :, :])
+        total_time = 50
+        with torch.no_grad():
+            r0, r1, r2 = network.time_evolution(data[0:1, :, :], total_time)
+        plot_continuous_subcortex(r0, r1, r2, total_time, 0.001)
 
 
 def fine_tune_network(cues, cue_labels, stimuli, stimuli_labels, network, batch_size, lr, epochs, device):

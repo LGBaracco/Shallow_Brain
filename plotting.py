@@ -196,3 +196,17 @@ def plot_heatmap(measures, view=False, save=True):
         fig.show()
 
     plt.clf()
+
+
+def plot_continuous_subcortex(r0, r1, r2, total_time, dt, view=False, save=True):
+
+    time = np.arange(0, total_time*dt, dt)
+
+    plt.ylabel('Activation')
+    plt.xlabel('Time (s)')
+    plt.title('Difference of left and right activation across stimuli over time')
+    plt.plot(time, r0[:, 0, 0], label='r0')
+    plt.plot(time, r1[:, 0, 0], label='r1')
+    plt.plot(time, r2[:, 0, 0], label='r2')
+    plt.legend()
+    plt.show()

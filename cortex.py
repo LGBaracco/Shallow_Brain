@@ -1,27 +1,10 @@
 import torch.nn as nn
 import torch
-
-
-class MLPClassifier(nn.Module):
-    """MLP classifier, probably not useful anymore"""
-    def __init__(self):
-        super(MLPClassifier, self).__init__()
-
-        self.fc1 = nn.Linear(16*32, 256)
-        self.fc2 = nn.Linear(256, 64)
-        self.fc3 = nn.Linear(64, 4)
-
-    def forward(self, x):
-        x = x.view(x.shape[0], -1)
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        x = torch.log_softmax(self.fc3(x), dim=1)
-
-        return x
+from collections import OrderedDict
 
 
 class ConvolutionalClassifier(nn.Module):
-    def __init__(self):
+    def __init__(self, r_initial=0.1, tau=0.01, dt=0.001):
         super(ConvolutionalClassifier, self).__init__()
 
         self.conv1 = nn.Conv2d(1, 4, 4)
@@ -32,7 +15,11 @@ class ConvolutionalClassifier(nn.Module):
         self.fc2 = nn.Linear(2, 32)
         self.fc3 = nn.Linear(32, 2)  # Motor output with cue
 
-    def classifier(self, x):
+        self.r_initial = r_initial
+        self.tau = tau
+        self.dt = dt
+
+    def classify(self, x):
 
         while type(x) is list:  # dirty trick: not yet sure why it's necessary (might be due to 1-n batches)
             x = x[0]
@@ -49,11 +36,11 @@ class ConvolutionalClassifier(nn.Module):
 
         if cue is not None:
 
-            cue_outputs = self.classifier(cue)
+            cue_outputs = self.classify(cue)
             _, cues = torch.max(cue_outputs, 1)
             cues = cues.unsqueeze(1)
 
-            stimuli_outputs = self.classifier(x)
+            stimuli_outputs = self.classify(x)
             _, stimuli = torch.max(stimuli_outputs, 1)
             stimuli = stimuli.unsqueeze(1)
 
@@ -64,7 +51,7 @@ class ConvolutionalClassifier(nn.Module):
             x = torch.relu(self.fc2(x))
             x = torch.log_softmax(self.fc3(x), dim=1)
         else:
-            x = self.classifier(x)
+            x = self.classify(x)
 
         return x
 
@@ -96,3 +83,15 @@ class ConvolutionalClassifier(nn.Module):
                 return torch.relu(self.fc2(x))
             case 6:
                 return torch.log_softmax(self.fc3(x), dim=1)
+
+    def time_evolution(self, x, total_timesteps):
+
+        r0 = r1 = r2 = r3 = r4 = self.r_initial
+
+        x = x.unsqueeze(1)
+        r0_values = torch.zeros((total_timesteps,) + x.size())
+        x = self.pool(self.conv1(x))  # calculation is performed just to get the shape of the output tensor
+        r1_values = torch.zeros((total_timesteps,) + x.size())
+        x = self.pool(self.conv2(x))
+        r2_values = torch.zeros((total_timesteps,) + x.size())
+        x = self.fc1(x.view(x.shape[0], -1))

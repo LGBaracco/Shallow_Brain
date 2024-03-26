@@ -27,11 +27,15 @@ class SubcortexWW:
 
 class SubcortexMLP(nn.Module):
     """Model of the subcortical pathway based on a simple one-hidden-layer Perceptron"""
-    def __init__(self):
+    def __init__(self, r_initial=0.1, tau=0.01, dt=0.001):
         super(SubcortexMLP, self).__init__()
 
         self.fc1 = nn.Linear(2, 16)
         self.fc2 = nn.Linear(16, 2, bias=False)
+
+        self.r_initial = r_initial
+        self.tau = tau
+        self.dt = dt
 
     def forward(self, x):
         while type(x) is list:  # dirty trick: not yet sure why it's necessary
@@ -52,3 +56,27 @@ class SubcortexMLP(nn.Module):
                 return torch.relu(self.fc1(x))
             case 2:
                 return torch.log_softmax(self.fc2(x), dim=1)
+
+    def time_evolution(self, x, total_timesteps):
+        x = stimuli_extractor(x).to(next(self.parameters()).device)
+
+        r0 = r1 = r2 = self.r_initial
+
+        r0_values = torch.zeros((total_timesteps,)+x.size())
+        x = self.fc1(x)  # calculation is performed just to get the shape of the output tensor
+        r1_values = torch.zeros((total_timesteps,) + x.size())
+        x = self.fc2(x)
+        r2_values = torch.zeros((total_timesteps,) + x.size())
+        for i in range(total_timesteps):
+            r0 += (self.dt / self.tau) * (-r0 + x)
+            r0_values[i] = r0
+
+            f1 = torch.relu(self.fc1(r0))
+            r1 += (self.dt / self.tau) * (-r1 + f1)
+            r1_values[i] = r1
+
+            f2 = torch.log_softmax(self.fc2(r1), dim=1)
+            r2 += (self.dt / self.tau) * (-r2 + f2)
+            r2_values[i] = r2
+
+        return r0_values, r1_values, r2_values
