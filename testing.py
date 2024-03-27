@@ -47,36 +47,51 @@ def simple_test(network, cues, stimuli, device):
 
 
 @torch.no_grad()
-def test(network, stimuli, brightness_labels, device) -> float:
+def test(network, stimuli, brightness_labels, cues, device) -> (float, float):
     """Test both the classification accuracy of both the stimuli and motor response using test set stimuli"""
 
     network = network.to(device)
+    cues = torch.from_numpy(cues).float().to(device)
     stimuli = torch.from_numpy(stimuli).float().to(device)
     brightness_labels = torch.tensor(brightness_labels).float().to(device)
 
     stimuli_dataset = TensorDataset(stimuli, brightness_labels)
     stimuli_loader = DataLoader(stimuli_dataset, batch_size=1, shuffle=False)
+    cues_dataset = TensorDataset(cues)
+    cue_loader = DataLoader(cues_dataset, batch_size=1, shuffle=False)
 
     correct_brightness = 0
     total = 0
+    correct_motor = 0
+    for stimulus, brightness_label in stimuli_loader:
+        for cue in cue_loader:
 
-    for stimuli, brightness_label in stimuli_loader:
+            # Classify stimuli
+            outputs = network(stimulus)
+            _, predicted_stimulus = torch.max(outputs, 1)
 
-        # Classify stimuli
-        outputs = network(stimuli)
-        _, predicted_stimulus = torch.max(outputs, 1)
-        total += brightness_label.size(0)
-        correct_brightness += (predicted_stimulus == brightness_label).sum().item()
+            outputs = network(cue)
+            _, predicted_cue = torch.max(outputs, 1)
 
-        '''if (cue_label == 3) ^ (brightness_label == 1):  # the cue/label match is an XOR
-            motor_label = torch.tensor(1)
-        else:
-            motor_label = torch.tensor(0)'''
+            total += brightness_label.size(0)
+            correct_brightness += (predicted_stimulus == brightness_label).sum().item()
+
+            if (predicted_cue == 3) ^ (brightness_label == 1):  # the cue/label match is an XOR
+                motor_label = torch.tensor(1)
+            else:
+                motor_label = torch.tensor(0)
+
+            outputs = network(stimulus, cue)
+            _, predicted = torch.max(outputs, 1)
+            correct_motor += (predicted == motor_label).sum().item()
 
     brightness_accuracy = 100 * correct_brightness / total
     print('brightness accuracy: ' + str(brightness_accuracy))
 
-    return brightness_accuracy
+    motor_accuracy = 100 * correct_motor / total
+    print('motor accuracy: ' + str(motor_accuracy))
+
+    return brightness_accuracy, motor_accuracy
 
 
 @torch.no_grad()
@@ -186,7 +201,7 @@ def get_outputs(network, cues, stimuli):
 
 @torch.no_grad()
 def test_step_wise(network, cues, cue_labels, stimuli, stimuli_labels, device):
-    """Testing the whole network combining cortex and subcortex using a time component."""
+    """Testing the whole network combining cortex and subcortex using a discreet time component."""
     network = network.to(device)
 
     cues = torch.from_numpy(cues).float().to(device)

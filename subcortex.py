@@ -62,21 +62,25 @@ class SubcortexMLP(nn.Module):
 
         r0 = r1 = r2 = self.r_initial
 
-        r0_values = torch.zeros((total_timesteps,)+x.size())
-        x = self.fc1(x)  # calculation is performed just to get the shape of the output tensor
-        r1_values = torch.zeros((total_timesteps,) + x.size())
-        x = self.fc2(x)
-        r2_values = torch.zeros((total_timesteps,) + x.size())
+        r0_values = torch.zeros((total_timesteps+1,)+x.size())
+        r0_values[0] = r0
+        y = self.fc1(x)  # calculation is performed just to get the shape of the output tensor
+        r1_values = torch.zeros((total_timesteps+1,) + y.size())
+        r1_values[0] = r1
+        y = self.fc2(y)
+        r2_values = torch.zeros((total_timesteps+1,) + y.size())
+        r2_values[0] = r2
+
         for i in range(total_timesteps):
             r0 += (self.dt / self.tau) * (-r0 + x)
-            r0_values[i] = r0
+            r0_values[i+1] = r0
 
             f1 = torch.relu(self.fc1(r0))
             r1 += (self.dt / self.tau) * (-r1 + f1)
-            r1_values[i] = r1
+            r1_values[i+1] = r1
 
             f2 = torch.log_softmax(self.fc2(r1), dim=1)
             r2 += (self.dt / self.tau) * (-r2 + f2)
-            r2_values[i] = r2
+            r2_values[i+1] = r2
 
         return r0_values, r1_values, r2_values

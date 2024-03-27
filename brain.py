@@ -17,7 +17,7 @@ class ANNBrain(nn.Module):
         if cue is None:
             return self.cortex(x)  # or subcortex?
 
-        _, saccade = torch.max(self.cortex.classifier(cue), 1)
+        _, saccade = torch.max(self.cortex.classify(cue), 1)
 
         x_subcortex = self.subcortex(x)
 
@@ -35,7 +35,7 @@ class ANNBrain(nn.Module):
         if cue is None:
             return self.cortex(x)  # or subcortex?
 
-        _, saccade = torch.max(self.cortex.classifier(cue), 1)
+        saccade = self.cortex.classify(cue)
 
         m = torch.zeros((7, 4))
 
@@ -48,7 +48,8 @@ class ANNBrain(nn.Module):
                     x_subcortex = self.subcortex.ahead(x, i)
                     x_cortex = self.cortex.ahead(x, i, saccade)
                 case 1:
-                    x_subcortex = self.subcortex.ahead(x_subcortex, i) * (- (saccade.item() - 3))  # if antisaccade, multiply by 0
+                    _, cues = torch.max(saccade, 1)
+                    x_subcortex = self.subcortex.ahead(x_subcortex, i) * (- (cues - 3))  # if antisaccade, multiply by 0
                     x_cortex = self.cortex.ahead(x_cortex, i, saccade)
                 case 2:  # subcortex output
                     x_subcortex = self.subcortex.ahead(x_subcortex, i)

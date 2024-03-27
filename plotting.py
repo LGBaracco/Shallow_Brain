@@ -9,12 +9,13 @@ def plot_accuracy(measures, view=False, save=True):
     means = np.mean(measures, axis=0)
     std_devs = np.std(measures, axis=0)
 
-    labels = np.array(['Classification training accuracy', 'Classification test accuracy'])  # 'Prosaccade ratio (slanted cues)', 'Left ratio (equal brightness)'
+    labels = np.array(['Classification training accuracy', 'Classification test accuracy'])
     colors = ['blue', 'green']
-    if measures.shape[1] == 3:
+    if measures.shape[1] == 4:
         labels = np.append(labels, 'Motor training accuracy')
+        labels = np.append(labels, 'Motor test accuracy')
         colors[1] = 'blue'
-        colors.append('green')
+        colors.extend(['green', 'green'])
         filename = 'Pictures/accuracy_cortex'
     else:
         filename = 'Pictures/accuracy_subcortex'
@@ -198,15 +199,27 @@ def plot_heatmap(measures, view=False, save=True):
     plt.clf()
 
 
-def plot_continuous_subcortex(r0, r1, r2, total_time, dt, view=False, save=True):
+def plot_evolution(activations, total_time, dt, view=False, save=True):
 
-    time = np.arange(0, total_time*dt, dt)
+    time = np.arange(0, (total_time*dt)+dt, dt)
 
     plt.ylabel('Activation')
     plt.xlabel('Time (s)')
-    plt.title('Difference of left and right activation across stimuli over time')
-    plt.plot(time, r0[:, 0, 0], label='r0')
-    plt.plot(time, r1[:, 0, 0], label='r1')
-    plt.plot(time, r2[:, 0, 0], label='r2')
+    plt.title('activation of sampled neuron from each subcortical layer over time')
+    for i, r in enumerate(activations):
+        if len(r.size()) == 5:
+            plt.plot(time, r[:, 0, 0, 0, 0], label=f"r{i}")
+            plt.title('activation of sampled neuron from each cortical layer over time')
+        else:
+            plt.plot(time, r[:, 0, 0], label=f"r{i}")
     plt.legend()
-    plt.show()
+    plt.xlim(0, time[-1])
+
+    if save:
+        if len(activations) > 3:
+            plt.savefig('Pictures/cortex_time_evolution')
+        else:
+            plt.savefig('Pictures/subcortex_time_evolution')
+    if view:
+        plt.show()
+    plt.clf()

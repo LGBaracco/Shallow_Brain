@@ -11,8 +11,8 @@ from testing import *
 from plotting import *
 import torch
 
-# TODO: ct-cortex
-#       Later: negativeness of activations, argmaxxing??
+# TODO: make ct-cortex plots
+#       Later: negativeness of activations
 
 
 def main():
@@ -21,10 +21,11 @@ def main():
     ITERATIONS = 30
     BATCH_SIZE = 32
     LR = 0.003
-    EPOCHS = 150
+    EPOCHS = 100
+    DT = 0.001
     # -1 training subcortex 0 training cortex, 1 sanity check, 2 and 3 training/testing subcort and cort, 4 and 5 plotting subcort and cort,
-    # 6 test full brain, 7 step-wise analysis, 8 continuous analysis
-    TRAINING = 8
+    # 6 test full brain, 7 step-wise analysis, 8 and 9 continuous analysis
+    TRAINING = 9
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -86,7 +87,7 @@ def main():
 
     elif TRAINING == 3:  # get NDArray with all final quantitative measures
 
-        measures = np.zeros((ITERATIONS, 5))  # get all the necessary measures for each iteration
+        measures = np.zeros((ITERATIONS, 6))  # get all the necessary measures for each iteration
         vague_predictions = np.zeros((ITERATIONS, 11))
         for i in range(ITERATIONS):
             print('Iteration #' + str(i+1))
@@ -104,14 +105,14 @@ def main():
 
             # 2f brightness test set
             stimuli, labels = generate_test_set()
-            brightness_accuracy = test(network, stimuli, labels, device)
-            measures[i, 2] = brightness_accuracy
+            brightness_accuracy, motor_accuracy = test(network, stimuli, labels, cues, device)
+            measures[i, 2:4] = brightness_accuracy
 
             # Ambiguous test
             cues, stimuli = generate_vague()
             cue_ratio = test_vague_cues(network, cues, device)
             stimuli_ratio, predicted_stimulis = test_vague_stimuli(network, stimuli, device)
-            measures[i, 3:5] = [cue_ratio, stimuli_ratio]
+            measures[i, 4:6] = [cue_ratio, stimuli_ratio]
             vague_predictions[i, :] = predicted_stimulis
 
         print(measures)
@@ -130,9 +131,9 @@ def main():
     elif TRAINING == 5:
         measures = np.load('measures.npy')
         brightnesses = np.load('brightnesses.npy')
-        plot_accuracy(measures[:, :3], True, True)
-        plot_ratio(measures[:, 3:], True, True)
-        plot_equal_brightness(brightnesses, True, True, False)
+        plot_accuracy(measures[:, :4], True, False)
+        plot_ratio(measures[:, 4:], False, False)
+        plot_equal_brightness(brightnesses, False, False, False)
 
     elif TRAINING == 6:
 
@@ -164,21 +165,33 @@ def main():
         accuracy, measures = test_step_wise(network, cues, cue_labels, stimuli, stimuli_labels, device)
 
         print(accuracy, measures)
-        plot_heatmap(measures, True, True)
+        plot_heatmap(measures, True, False)
 
         # plot_brain(measures, False, False)
 
     elif TRAINING == 8:
-        network = SubcortexMLP().to(device)
+        network = SubcortexMLP(dt=DT).to(device)
         state_dict = torch.load('./subc.pth')
         network.load_state_dict(state_dict)
 
         data = torch.from_numpy(stimuli).float().to(torch.device('cuda'))
         result = network(data[0:1, :, :])
-        total_time = 50
         with torch.no_grad():
-            r0, r1, r2 = network.time_evolution(data[0:1, :, :], total_time)
-        plot_continuous_subcortex(r0, r1, r2, total_time, 0.001)
+            activations = network.time_evolution(data[0:1, :, :], EPOCHS)
+        plot_evolution(activations, EPOCHS, DT, True, True)
+
+    elif TRAINING == 9:
+        network = ConvolutionalClassifier(dt=DT).to(device)
+        state_dict = torch.load('./conv.pth')
+        network.load_state_dict(state_dict)
+
+        data = torch.from_numpy(stimuli).float().to(torch.device('cuda'))
+        cues = torch.from_numpy(cues).float().to(torch.device('cuda'))
+        result = network(data[0:1, :, :], cues[0:1, :, :])
+        with torch.no_grad():
+            activations = network.time_evolution(data[0:1, :, :], EPOCHS, cues[0:1, :, :])
+
+        plot_evolution(activations, EPOCHS, DT, True, False)
 
 
 def fine_tune_network(cues, cue_labels, stimuli, stimuli_labels, network, batch_size, lr, epochs, device):
