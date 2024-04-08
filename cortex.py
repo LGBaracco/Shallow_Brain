@@ -90,53 +90,67 @@ class ConvolutionalClassifier(nn.Module):
 
     def time_evolution(self, x, total_timesteps, cue):
 
-        r0 = r1 = r2 = r3 = r4 = r5 = self.r_initial
+        r0_out = r1_out = r2_out = r3_out = r4_out = r5_out = self.r_initial
 
         y = x.unsqueeze(1)
+        r0 = torch.full((y.size()), self.r_initial, device=x.device)
         r0_values = torch.zeros((total_timesteps+1,) + y.size())
         r0_values[0] = r0
         y = self.pool(self.conv1(y))  # calculation is performed just to get the shape of the output tensor
+        r1 = torch.full((y.size()), self.r_initial, device=x.device)
         r1_values = torch.zeros((total_timesteps+1,) + y.size())
         r1_values[0] = r1
         y = self.pool(self.conv2(y))
+        r2 = torch.full((y.size()), self.r_initial, device=x.device)
         r2_values = torch.zeros((total_timesteps+1,) + y.size())
         r2_values[0] = r2
         y = self.fc1(y.view(y.shape[0], -1))
+        r3 = torch.full((y.size()), self.r_initial, device=x.device)
         r3_values = torch.zeros((total_timesteps+1,) + y.size())
         r3_values[0] = r3
         y = self.fc2(y)
+        r4 = torch.full((y.size()), self.r_initial, device=x.device)
         r4_values = torch.zeros((total_timesteps+1,) + y.size())
         r4_values[0] = r4
         y = self.fc3(y)
+        r5 = torch.full((y.size()), self.r_initial, device=x.device)
         r5_values = torch.zeros((total_timesteps+1,) + y.size())
         r5_values[0] = r5
 
         x = x.unsqueeze(1)
         for i in range(total_timesteps):
-            r0 += (self.dt / self.tau) * (-r0 + x)
-            r0_values[i+1] = r0
+
+            r0_out += (self.dt / self.tau) * (-r0 + x)
+            r0_values[i+1] = r0_out
 
             f1 = self.pool(torch.relu(self.conv1(r0)))
-            r1 += (self.dt / self.tau) * (-r1 + f1)
-            r1_values[i+1] = r1
+            r1_out += (self.dt / self.tau) * (-r1 + f1)
+            r1_values[i+1] = r1_out
 
             f2 = self.pool(torch.relu(self.conv2(r1)))
-            r2 += (self.dt / self.tau) * (-r2 + f2)
-            r2_values[i+1] = r2
+            r2_out += (self.dt / self.tau) * (-r2 + f2)
+            r2_values[i+1] = r2_out
 
             r2_flat = r2.view(r2.shape[0], -1)
             f3 = torch.log_softmax(self.fc1(r2_flat), dim=1)
             cue_outputs = self.classify(cue)
             f3[:, 2:4] = cue_outputs[:, 2:4]
-            r3 += (self.dt / self.tau) * (-r3 + f3)  # Choice: integrate only after merging cue and stimulus
-            r3_values[i+1] = r3
+            r3_out += (self.dt / self.tau) * (-r3 + f3)  # Choice: integrate only after merging cue and stimulus
+            r3_values[i+1] = r3_out
 
             f4 = torch.relu(self.fc2(r3))
-            r4 += (self.dt / self.tau) * (-r4 + f4)
-            r4_values[i+1] = r4
+            r4_out += (self.dt / self.tau) * (-r4 + f4)
+            r4_values[i+1] = r4_out
 
-            f5 = torch.log_softmax(self.fc3(r4), dim=1)
-            r5 += (self.dt / self.tau) * (-r5 + f5)
-            r5_values[i+1] = r5
+            f5 = torch.softmax(self.fc3(r4), dim=1)  # non-log softmax as the range is more intuitive
+            r5_out += (self.dt / self.tau) * (-r5 + f5)
+            r5_values[i+1] = r5_out
+
+            r0 = r0_out
+            r1 = r1_out
+            r2 = r2_out
+            r3 = r3_out
+            r4 = r4_out
+            r5 = r5_out
 
         return r0_values, r1_values, r2_values, r3_values, r4_values, r5_values

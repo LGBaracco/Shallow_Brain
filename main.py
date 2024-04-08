@@ -11,21 +11,22 @@ from testing import *
 from plotting import *
 import torch
 
-# TODO: make ct-cortex plots
-#       Later: negativeness of activations
 
+# TODO: mean through iterations, plot1 no noise, same tau, no noise bigger cortex tau, noise, bigger cortex tau
 
 def main():
 
     # Hyperparameters
-    ITERATIONS = 30
+    ITERATIONS = 3  # re-training iterations
     BATCH_SIZE = 32
     LR = 0.003
-    EPOCHS = 100
+    EPOCHS = 150
+    TIMESTEPS = 100
     DT = 0.001
+    TAU = 0.01
     # -1 training subcortex 0 training cortex, 1 sanity check, 2 and 3 training/testing subcort and cort, 4 and 5 plotting subcort and cort,
     # 6 test full brain, 7 step-wise analysis, 8 and 9 continuous analysis
-    TRAINING = 9
+    TRAINING = 11
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -174,24 +175,78 @@ def main():
         state_dict = torch.load('./subc.pth')
         network.load_state_dict(state_dict)
 
-        data = torch.from_numpy(stimuli).float().to(torch.device('cuda'))
-        result = network(data[0:1, :, :])
+        data = torch.from_numpy(stimuli).float().to(device)
+        result = stimuli_extractor(data[0:1, :, :])
         with torch.no_grad():
-            activations = network.time_evolution(data[0:1, :, :], EPOCHS)
-        plot_evolution(activations, EPOCHS, DT, True, True)
+            activations = network.time_evolution(data[0:1, :, :], TIMESTEPS)
+        plot_evolution(activations, TIMESTEPS, DT, True, True)
 
     elif TRAINING == 9:
         network = ConvolutionalClassifier(dt=DT).to(device)
         state_dict = torch.load('./conv.pth')
         network.load_state_dict(state_dict)
 
-        data = torch.from_numpy(stimuli).float().to(torch.device('cuda'))
-        cues = torch.from_numpy(cues).float().to(torch.device('cuda'))
+        data = torch.from_numpy(stimuli).float().to(device)
+        cues = torch.from_numpy(cues).float().to(device)
         result = network(data[0:1, :, :], cues[0:1, :, :])
         with torch.no_grad():
-            activations = network.time_evolution(data[0:1, :, :], EPOCHS, cues[0:1, :, :])
+            activations = network.time_evolution(data[0:1, :, :], TIMESTEPS, cues[0:1, :, :])
 
-        plot_evolution(activations, EPOCHS, DT, True, False)
+        plot_evolution(activations, TIMESTEPS, DT, True, True)
+
+    elif TRAINING == 10:
+
+        cortex = ConvolutionalClassifier(dt=DT, tau=TAU).to(device)
+        state_dict = torch.load('./conv.pth')
+        cortex.load_state_dict(state_dict)
+        subcortex = SubcortexMLP(dt=DT, tau=TAU).to(device)
+        state_dict = torch.load('./subc.pth')
+        subcortex.load_state_dict(state_dict)
+        network = ANNBrain(cortex, subcortex)
+
+        # stimuli += np.abs(np.random.normal(loc=0.0, scale=0.2, size=stimuli.shape)) # Gaussian noise
+        data = torch.from_numpy(stimuli).float().to(torch.device('cuda'))
+        cues = torch.from_numpy(cues).float().to(torch.device('cuda'))
+
+        with torch.no_grad():
+            (_, _, _, _, _, cortex_measures_pro), (_, _, subcortex_measures_pro) = network.time_evolution(data, TIMESTEPS, cues[0:1, :, :])
+            (_, _, _, _, _, cortex_measures_anti), (_, _, subcortex_measures_anti) = network.time_evolution(data, TIMESTEPS, cues[-1:, :, :])
+
+        plot_decision_evolution(cortex_measures_pro, subcortex_measures_pro, cortex_measures_anti, subcortex_measures_anti,
+                                TIMESTEPS, DT, stimuli_labels, True, False)
+
+    elif TRAINING == 11:
+
+        measures = torch.zeros((ITERATIONS*TIMESTEPS, 4, len(stimuli_labels), 2))
+        for i in range(ITERATIONS):
+
+            cues, cue_labels = generate_cues()
+            stimuli, stimuli_labels = generate_stimuli()
+            data = np.concatenate((cues, stimuli), axis=0)
+            labels = cue_labels + stimuli_labels
+            subcortex, _ = train_subcortex(stimuli, stimuli_labels, BATCH_SIZE, LR, EPOCHS, device)
+            cortex, _ = training(data, labels, BATCH_SIZE, LR, EPOCHS, device)
+            cortex, _ = fine_tune_network(cues, cue_labels, stimuli, stimuli_labels, cortex, BATCH_SIZE, LR, EPOCHS * 2, device)
+
+            network = ANNBrain(cortex, subcortex)
+
+            cues, cue_labels = generate_cues()
+            stimuli, stimuli_labels = generate_stimuli()
+            # stimuli += np.abs(np.random.normal(loc=0.0, scale=0.2, size=stimuli.shape)) # Gaussian noise
+            stimuli = torch.from_numpy(stimuli).float().to(device)
+            cues = torch.from_numpy(cues).float().to(device)
+
+            with torch.no_grad():
+                (_, _, _, _, _, cortex_measures_pro), (_, _, subcortex_measures_pro) = network.time_evolution(stimuli,
+                                                                                                            TIMESTEPS,
+                                                                                                            cues[0:1, :, :])
+                (_, _, _, _, _, cortex_measures_anti), (_, _, subcortex_measures_anti) = network.time_evolution(stimuli,
+                                                                                                              TIMESTEPS,
+                                                                                                              cues[-1:, :, :])
+
+            plot_decision_evolution(cortex_measures_pro, subcortex_measures_pro, cortex_measures_anti,
+                                    subcortex_measures_anti,
+                                    TIMESTEPS, DT, stimuli_labels, True, False)
 
 
 def fine_tune_network(cues, cue_labels, stimuli, stimuli_labels, network, batch_size, lr, epochs, device):

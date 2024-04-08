@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch
 import itertools
+from utilfuncs import *
 
 
 class ANNBrain(nn.Module):
@@ -71,3 +72,14 @@ class ANNBrain(nn.Module):
                     m[i, 0:2] = self.cortex.ahead(x_cortex, i, saccade)
 
         return m
+
+    def time_evolution(self, x, total_timesteps, cue):
+
+        _, cue_output = torch.max(self.cortex.classify(cue), 1)
+        inhibition = (- (cue_output - 3))  # 1 if prosaccade, 0 if antisaccade
+
+        cortex_activations = self.cortex.time_evolution(x, total_timesteps, cue)
+
+        subcortex_activations = self.subcortex.time_evolution(x, total_timesteps, inhibition)
+
+        return cortex_activations, subcortex_activations

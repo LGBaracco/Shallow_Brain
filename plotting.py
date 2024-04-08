@@ -203,9 +203,9 @@ def plot_evolution(activations, total_time, dt, view=False, save=True):
 
     time = np.arange(0, (total_time*dt)+dt, dt)
 
-    plt.ylabel('Activation')
+    plt.ylabel('Firing rate (a.u.)')
     plt.xlabel('Time (s)')
-    plt.title('activation of sampled neuron from each subcortical layer over time')
+    plt.title('rate of sampled neuron from each subcortical layer over time')
     for i, r in enumerate(activations):
         if len(r.size()) == 5:
             plt.plot(time, r[:, 0, 0, 0, 0], label=f"r{i}")
@@ -217,9 +217,135 @@ def plot_evolution(activations, total_time, dt, view=False, save=True):
 
     if save:
         if len(activations) > 3:
-            plt.savefig('Pictures/cortex_time_evolution')
+            plt.savefig('Pictures/time/cortex_time_evolution')
         else:
-            plt.savefig('Pictures/subcortex_time_evolution')
+            plt.savefig('Pictures/time/subcortex_time_evolution')
     if view:
         plt.show()
+    plt.clf()
+
+
+def plot_decision_evolution(cortex_measures_pro, subcortex_measures_pro, cortex_measures_anti, subcortex_measures_anti, total_time, dt, labels, view=False, save=True):
+
+    time = np.arange(0, (total_time*dt)+dt, dt)
+    labels = np.array(labels)
+
+    # Left and prosaccade
+    activations_cortex = cortex_measures_pro[:, np.where(labels == 0)[0], :]
+    means_cortex = torch.mean(activations_cortex, dim=1)
+    std_cortex = torch.std(activations_cortex, dim=1)
+    activations_subcortex = subcortex_measures_pro[:, np.where(labels == 0)[0], :]
+    means_subcortex = torch.mean(activations_subcortex, dim=1)
+    std_subcortex = torch.std(activations_subcortex, dim=1)
+
+    plt.ylabel('Firing rate (a.u.)')
+    plt.xlabel('Time (s)')
+    plt.title('Mean rates: left brighter, prosaccade')
+    #_, decision = torch.max(activations[-1, :, :], 1)
+    # plt.title(f'L:{result[0,0]:.2f}, R:{result[0,1]:.2f}, D:{decision}')
+    plt.plot(time, means_cortex[:, 0], label="L cortex rate", color='red')
+    plt.fill_between(time, means_cortex[:, 0]-std_cortex[:, 0], means_cortex[:, 0]+std_cortex[:, 0], alpha=0.3, color='red')
+    plt.plot(time, means_cortex[:, 1], label="R cortex rate", color='orange')
+    plt.fill_between(time, means_cortex[:, 1]-std_cortex[:, 1], means_cortex[:, 1]+std_cortex[:, 1], alpha=0.3, color='orange')
+    plt.plot(time, means_subcortex[:, 0], label="L subcortex rate", color='blue')
+    plt.fill_between(time, means_subcortex[:, 0]-std_subcortex[:, 0], means_subcortex[:, 0]+std_subcortex[:, 0], alpha=0.3, color='blue')
+    plt.plot(time, means_subcortex[:, 1], label="R subcortex rate", color='cyan')
+    plt.fill_between(time, means_subcortex[:, 1]-std_subcortex[:, 1], means_subcortex[:, 1]+std_subcortex[:, 1], alpha=0.3, color='cyan')
+
+    plt.legend()
+    plt.xlim(0, time[-1])
+
+    if save:
+        plt.savefig('Pictures/time/prosaccade_left_time_evolution')
+    if view:
+        plt.show()
+
+    plt.clf()
+
+    # Right and prosaccade
+    activations_cortex = cortex_measures_pro[:, np.where(labels == 1)[0], :]
+    means_cortex = torch.mean(activations_cortex, dim=1)
+    std_cortex = torch.std(activations_cortex, dim=1)
+    activations_subcortex = subcortex_measures_pro[:, np.where(labels == 1)[0], :]
+    means_subcortex = torch.mean(activations_subcortex, dim=1)
+    std_subcortex = torch.std(activations_subcortex, dim=1)
+
+    plt.ylabel('Firing rate (a.u.)')
+    plt.xlabel('Time (s)')
+    plt.title('Mean rates: right brighter, prosaccade')
+    plt.plot(time, means_cortex[:, 0], label="L cortex rate", color='red')
+    plt.fill_between(time, means_cortex[:, 0]-std_cortex[:, 0], means_cortex[:, 0]+std_cortex[:, 0], alpha=0.3, color='red')
+    plt.plot(time, means_cortex[:, 1], label="R cortex rate", color='orange')
+    plt.fill_between(time, means_cortex[:, 1]-std_cortex[:, 1], means_cortex[:, 1]+std_cortex[:, 1], alpha=0.3, color='orange')
+    plt.plot(time, means_subcortex[:, 0], label="L subcortex rate", color='blue')
+    plt.fill_between(time, means_subcortex[:, 0]-std_subcortex[:, 0], means_subcortex[:, 0]+std_subcortex[:, 0], alpha=0.3, color='blue')
+    plt.plot(time, means_subcortex[:, 1], label="R subcortex rate", color='cyan')
+    plt.fill_between(time, means_subcortex[:, 1]-std_subcortex[:, 1], means_subcortex[:, 1]+std_subcortex[:, 1], alpha=0.3, color='cyan')
+
+    plt.legend()
+    plt.xlim(0, time[-1])
+
+    if save:
+        plt.savefig('Pictures/time/prosaccade_right_time_evolution')
+    if view:
+        plt.show()
+
+    plt.clf()
+
+    # Left and antisaccade
+    activations_cortex = cortex_measures_anti[:, np.where(labels == 0)[0], :]
+    means_cortex = torch.mean(activations_cortex, dim=1)
+    std_cortex = torch.std(activations_cortex, dim=1)
+    activations_subcortex = subcortex_measures_anti[:, np.where(labels == 0)[0], :]
+    means_subcortex = torch.mean(activations_subcortex, dim=1)
+    std_subcortex = torch.std(activations_subcortex, dim=1)
+
+    plt.ylabel('Firing rate (a.u.)')
+    plt.xlabel('Time (s)')
+    plt.title('Mean rates: left brighter, antisaccade')
+    plt.plot(time, means_cortex[:, 0], label="L cortex rate", color='red')
+    plt.fill_between(time, means_cortex[:, 0]-std_cortex[:, 0], means_cortex[:, 0]+std_cortex[:, 0], alpha=0.3, color='red')
+    plt.plot(time, means_cortex[:, 1], label="R cortex rate", color='orange')
+    plt.fill_between(time, means_cortex[:, 1]-std_cortex[:, 1], means_cortex[:, 1]+std_cortex[:, 1], alpha=0.3, color='orange')
+    plt.plot(time, means_subcortex[:, 0], label="L subcortex rate", color='blue')
+    plt.fill_between(time, means_subcortex[:, 0]-std_subcortex[:, 0], means_subcortex[:, 0]+std_subcortex[:, 0], alpha=0.3, color='blue')
+    plt.plot(time, means_subcortex[:, 1], label="R subcortex rate", color='cyan')
+    plt.fill_between(time, means_subcortex[:, 1]-std_subcortex[:, 1], means_subcortex[:, 1]+std_subcortex[:, 1], alpha=0.3, color='cyan')
+
+    plt.legend()
+    plt.xlim(0, time[-1])
+
+    if save:
+        plt.savefig('Pictures/time/antisaccade_left_time_evolution')
+    if view:
+        plt.show()
+
+    plt.clf()
+
+    # Right and antisaccade
+    activations_cortex = cortex_measures_anti[:, np.where(labels == 1)[0], :]
+    means_cortex = torch.mean(activations_cortex, dim=1)
+    activations_subcortex = subcortex_measures_anti[:, np.where(labels == 1)[0], :]
+    means_subcortex = torch.mean(activations_subcortex, dim=1)
+
+    plt.ylabel('Firing rate (a.u.)')
+    plt.xlabel('Time (s)')
+    plt.title('Mean rates: right brighter, antisaccade')
+    plt.plot(time, means_cortex[:, 0], label="L cortex rate", color='red')
+    plt.fill_between(time, means_cortex[:, 0]-std_cortex[:, 0], means_cortex[:, 0]+std_cortex[:, 0], alpha=0.3, color='red')
+    plt.plot(time, means_cortex[:, 1], label="R cortex rate", color='orange')
+    plt.fill_between(time, means_cortex[:, 1]-std_cortex[:, 1], means_cortex[:, 1]+std_cortex[:, 1], alpha=0.3, color='orange')
+    plt.plot(time, means_subcortex[:, 0], label="L subcortex rate", color='blue')
+    plt.fill_between(time, means_subcortex[:, 0]-std_subcortex[:, 0], means_subcortex[:, 0]+std_subcortex[:, 0], alpha=0.3, color='blue')
+    plt.plot(time, means_subcortex[:, 1], label="R subcortex rate", color='cyan')
+    plt.fill_between(time, means_subcortex[:, 1]-std_subcortex[:, 1], means_subcortex[:, 1]+std_subcortex[:, 1], alpha=0.3, color='cyan')
+
+    plt.legend()
+    plt.xlim(0, time[-1])
+
+    if save:
+        plt.savefig('Pictures/time/antisaccade_right_time_evolution')
+    if view:
+        plt.show()
+
     plt.clf()

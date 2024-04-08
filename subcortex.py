@@ -57,30 +57,37 @@ class SubcortexMLP(nn.Module):
             case 2:
                 return torch.log_softmax(self.fc2(x), dim=1)
 
-    def time_evolution(self, x, total_timesteps):
+    def time_evolution(self, x, total_timesteps, inhibition=1):
         x = stimuli_extractor(x).to(next(self.parameters()).device)
 
-        r0 = r1 = r2 = self.r_initial
+        r0_out = r1_out = r2_out = self.r_initial
 
+        r0 = torch.full((x.size()), self.r_initial, device=x.device)
         r0_values = torch.zeros((total_timesteps+1,)+x.size())
         r0_values[0] = r0
         y = self.fc1(x)  # calculation is performed just to get the shape of the output tensor
+        r1 = torch.full((y.size()), self.r_initial, device=x.device)
         r1_values = torch.zeros((total_timesteps+1,) + y.size())
         r1_values[0] = r1
         y = self.fc2(y)
+        r2 = torch.full((y.size()), self.r_initial, device=x.device)
         r2_values = torch.zeros((total_timesteps+1,) + y.size())
         r2_values[0] = r2
 
         for i in range(total_timesteps):
-            r0 += (self.dt / self.tau) * (-r0 + x)
-            r0_values[i+1] = r0
+            r0_out += (self.dt / self.tau) * (-r0 + x)
+            r0_values[i+1] = r0_out
 
             f1 = torch.relu(self.fc1(r0))
-            r1 += (self.dt / self.tau) * (-r1 + f1)
-            r1_values[i+1] = r1
+            r1_out += (self.dt / self.tau) * (-r1 + f1)
+            r1_values[i+1] = r1_out
 
-            f2 = torch.log_softmax(self.fc2(r1), dim=1)
-            r2 += (self.dt / self.tau) * (-r2 + f2)
-            r2_values[i+1] = r2
+            f2 = torch.softmax(self.fc2(r1), dim=1)
+            r2_out += (self.dt / self.tau) * (-r2 + f2) * inhibition
+            r2_values[i+1] = r2_out
+
+            r0 = r0_out
+            r1 = r1_out
+            r2 = r2_out
 
         return r0_values, r1_values, r2_values
