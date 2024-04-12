@@ -21,12 +21,13 @@ def main():
     BATCH_SIZE = 32
     LR = 0.003
     EPOCHS = 150
-    TIMESTEPS = 100
+    TIMESTEPS = 300
     DT = 0.001
     TAU = 0.01
+    R_INITIAL = 0.0
     # -1 training subcortex 0 training cortex, 1 sanity check, 2 and 3 training/testing subcort and cort, 4 and 5 plotting subcort and cort,
     # 6 test full brain, 7 step-wise analysis, 8 and 9 continuous analysis
-    TRAINING = 11
+    TRAINING = 10
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -171,7 +172,7 @@ def main():
         # plot_brain(measures, False, False)
 
     elif TRAINING == 8:
-        network = SubcortexMLP(dt=DT).to(device)
+        network = SubcortexMLP(dt=DT, r_initial=R_INITIAL).to(device)
         state_dict = torch.load('./subc.pth')
         network.load_state_dict(state_dict)
 
@@ -182,7 +183,7 @@ def main():
         plot_evolution(activations, TIMESTEPS, DT, True, True)
 
     elif TRAINING == 9:
-        network = ConvolutionalClassifier(dt=DT).to(device)
+        network = ConvolutionalClassifier(dt=DT, r_initial=R_INITIAL).to(device)
         state_dict = torch.load('./conv.pth')
         network.load_state_dict(state_dict)
 
@@ -196,15 +197,15 @@ def main():
 
     elif TRAINING == 10:
 
-        cortex = ConvolutionalClassifier(dt=DT, tau=TAU).to(device)
+        cortex = ConvolutionalClassifier(dt=DT, tau=TAU, r_initial=R_INITIAL).to(device)
         state_dict = torch.load('./conv.pth')
         cortex.load_state_dict(state_dict)
-        subcortex = SubcortexMLP(dt=DT, tau=TAU).to(device)
+        subcortex = SubcortexMLP(dt=DT, tau=TAU, r_initial=R_INITIAL).to(device)
         state_dict = torch.load('./subc.pth')
         subcortex.load_state_dict(state_dict)
         network = ANNBrain(cortex, subcortex)
 
-        # stimuli += np.abs(np.random.normal(loc=0.0, scale=0.2, size=stimuli.shape)) # Gaussian noise
+        # stimuli += np.abs(np.random.normal(loc=0.0, scale=0.2, size=stimuli.shape))  # Gaussian noise
         data = torch.from_numpy(stimuli).float().to(torch.device('cuda'))
         cues = torch.from_numpy(cues).float().to(torch.device('cuda'))
 
