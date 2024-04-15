@@ -12,8 +12,6 @@ from plotting import *
 import torch
 
 
-# TODO: mean through iterations, plot1 no noise, same tau, no noise bigger cortex tau, noise, bigger cortex tau
-
 def main():
 
     # Hyperparameters
@@ -21,7 +19,7 @@ def main():
     BATCH_SIZE = 32
     LR = 0.003
     EPOCHS = 150
-    TIMESTEPS = 300
+    TIMESTEPS = 150
     DT = 0.001
     TAU = 0.01
     R_INITIAL = 0.0
