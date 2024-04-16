@@ -44,3 +44,14 @@ def generate_motor_labels(cue_labels, stimuli_labels) -> List:
                 motor_labels.append(0)
 
     return motor_labels
+
+
+def get_decision_threshold(rates, threshold, dt):
+
+    convergence = rates[-1] * threshold
+    for i in range(rates.size(0)):
+
+        if rates[i] >= convergence:
+            return i * dt
+
+    return None

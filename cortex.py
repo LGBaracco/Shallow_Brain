@@ -12,8 +12,8 @@ class ConvolutionalClassifier(nn.Module):
         self.conv2 = nn.Conv2d(4, 6, 4)
         self.fc1 = nn.Linear(30, 4)  # identify stimuli
 
-        self.fc2 = nn.Linear(4, 32)
-        self.fc3 = nn.Linear(32, 2)  # Motor output with cue
+        self.fc2 = nn.Linear(4, 16)
+        self.fc3 = nn.Linear(16, 2)  # Motor output with cue
 
         self.r_initial = r_initial
         self.tau = tau

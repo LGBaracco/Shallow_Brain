@@ -15,7 +15,7 @@ import torch
 def main():
 
     # Hyperparameters
-    ITERATIONS = 3  # re-training iterations
+    ITERATIONS = 10  # re-training iterations
     BATCH_SIZE = 32
     LR = 0.003
     EPOCHS = 150
@@ -23,6 +23,7 @@ def main():
     DT = 0.001
     TAU = 0.01
     R_INITIAL = 0.0
+    THRESHOLD = 0.75  # convergence threshold of continuous-time network
     # -1 training subcortex 0 training cortex, 1 sanity check, 2 and 3 training/testing subcort and cort, 4 and 5 plotting subcort and cort,
     # 6 test full brain, 7 step-wise analysis, 8 and 9 continuous analysis
     TRAINING = 10
@@ -208,11 +209,11 @@ def main():
         cues = torch.from_numpy(cues).float().to(torch.device('cuda'))
 
         with torch.no_grad():
-            (_, _, _, _, _, cortex_measures_pro), (_, _, subcortex_measures_pro) = network.time_evolution(data, TIMESTEPS, cues[0:1, :, :])
-            (_, _, _, _, _, cortex_measures_anti), (_, _, subcortex_measures_anti) = network.time_evolution(data, TIMESTEPS, cues[-1:, :, :])
+            (_, _, _, _, _, cortex_measures_pro), (_, _, subcortex_measures_pro), finals_pro = network.time_evolution(data, TIMESTEPS, cues[0:1, :, :])
+            (_, _, _, _, _, cortex_measures_anti), (_, _, subcortex_measures_anti), finals_anti = network.time_evolution(data, TIMESTEPS, cues[-1:, :, :])
 
-        plot_decision_evolution(cortex_measures_pro, subcortex_measures_pro, cortex_measures_anti, subcortex_measures_anti,
-                                TIMESTEPS, DT, stimuli_labels, True, False)
+        plot_rt_histogram(cortex_measures_pro, subcortex_measures_pro, cortex_measures_anti,
+                                DT, stimuli_labels, THRESHOLD, True, True)
 
     elif TRAINING == 11:
 
@@ -236,14 +237,14 @@ def main():
             cues = torch.from_numpy(cues).float().to(device)
 
             with torch.no_grad():
-                (_, _, _, _, _, cortex_measures_pro), (_, _, subcortex_measures_pro) = network.time_evolution(stimuli,
+                (_, _, _, _, _, cortex_measures_pro), (_, _, subcortex_measures_pro), finals_pro = network.time_evolution(stimuli,
                                                                                                             TIMESTEPS,
                                                                                                             cues[0:1, :, :])
-                (_, _, _, _, _, cortex_measures_anti), (_, _, subcortex_measures_anti) = network.time_evolution(stimuli,
+                (_, _, _, _, _, cortex_measures_anti), (_, _, subcortex_measures_anti), finals_anti = network.time_evolution(stimuli,
                                                                                                               TIMESTEPS,
                                                                                                               cues[-1:, :, :])
 
-            plot_decision_evolution(cortex_measures_pro, subcortex_measures_pro, cortex_measures_anti,
+            plot_decision_layer(cortex_measures_pro, subcortex_measures_pro, cortex_measures_anti,
                                     subcortex_measures_anti,
                                     TIMESTEPS, DT, stimuli_labels, True, False)
 

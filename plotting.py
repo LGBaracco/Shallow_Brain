@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import torch
 import scipy.stats as stats
+from utilfuncs import *
 
 
 def plot_accuracy(measures, view=False, save=True):
@@ -209,10 +210,10 @@ def plot_evolution(activations, total_time, dt, view=False, save=True):
     plt.title('rate of sampled neuron from each subcortical layer over time')
     for i, r in enumerate(activations):
         if len(r.size()) == 5:
-            plt.plot(time, r[:, 0, 0, 0, 0], label=f"r{i}")
+            plt.plot(time, r[:, 0, 0, 0, 0], label=f"r{i}_cx")
             plt.title('activation of sampled neuron from each cortical layer over time')
         else:
-            plt.plot(time, r[:, 0, 0], label=f"r{i}")
+            plt.plot(time, r[:, 0, 0], label=f"r{i}_subcx")
     plt.legend()
     plt.xlim(0, time[-1])
 
@@ -226,7 +227,7 @@ def plot_evolution(activations, total_time, dt, view=False, save=True):
     plt.clf()
 
 
-def plot_decision_evolution(cortex_measures_pro, subcortex_measures_pro, cortex_measures_anti, subcortex_measures_anti, total_time, dt, labels, view=False, save=True):
+def plot_decision_evolution(cortex_measures_pro, subcortex_measures_pro, cortex_measures_anti, subcortex_measures_anti, total_time, dt, labels, threshold, view=False, save=True):
 
     time = np.arange(0, (total_time*dt)+dt, dt)
     labels = np.array(labels)
@@ -244,17 +245,10 @@ def plot_decision_evolution(cortex_measures_pro, subcortex_measures_pro, cortex_
     means_subcortex = torch.mean(activations_subcortex, dim=1)
     std_subcortex = stats.sem(activations_subcortex, axis=1)
 
-    equilibria = [None, None, None, None]
-    for i in range(total_time):
-
-        if equilibria[0] is None and np.abs(means_cortex[i, 0] - means_cortex[i + 1, 0]) < 0.0003:
-            equilibria[0] = i * dt
-        if equilibria[1] is None and np.abs(means_cortex[i, 1] - means_cortex[i + 1, 1]) < 0.0003:
-            equilibria[1] = i * dt
-        if equilibria[2] is None and np.abs(means_subcortex[i, 0] - means_subcortex[i + 1, 0]) < 0.0003:
-            equilibria[2] = i * dt
-        if equilibria[3] is None and np.abs(means_subcortex[i, 1] - means_subcortex[i + 1, 1]) < 0.0003:
-            equilibria[3] = i * dt
+    equilibria = [get_decision_threshold(means_cortex[:, 0], threshold, dt),
+                  get_decision_threshold(means_cortex[:, 1], threshold, dt),
+                  get_decision_threshold(means_subcortex[:, 0], threshold, dt),
+                  get_decision_threshold(means_subcortex[:, 1], threshold, dt)]
 
 
     plt.ylabel('Firing rate (a.u.)')
@@ -299,17 +293,10 @@ def plot_decision_evolution(cortex_measures_pro, subcortex_measures_pro, cortex_
     means_subcortex = torch.mean(activations_subcortex, dim=1)
     std_subcortex = stats.sem(activations_subcortex, axis=1)
 
-    equilibria = [None, None, None, None]
-    for i in range(total_time):
-
-        if equilibria[0] is None and np.abs(means_cortex[i, 0] - means_cortex[i + 1, 0]) < 0.0003:
-            equilibria[0] = i * dt
-        if equilibria[1] is None and np.abs(means_cortex[i, 1] - means_cortex[i + 1, 1]) < 0.0003:
-            equilibria[1] = i * dt
-        if equilibria[2] is None and np.abs(means_subcortex[i, 0] - means_subcortex[i + 1, 0]) < 0.0003:
-            equilibria[2] = i * dt
-        if equilibria[3] is None and np.abs(means_subcortex[i, 1] - means_subcortex[i + 1, 1]) < 0.0003:
-            equilibria[3] = i * dt
+    equilibria = [get_decision_threshold(means_cortex[:, 1], threshold, dt),
+                  get_decision_threshold(means_cortex[:, 0], threshold, dt),
+                  get_decision_threshold(means_subcortex[:, 1], threshold, dt),
+                  get_decision_threshold(means_subcortex[:, 0], threshold, dt)]
 
     plt.ylabel('Firing rate (a.u.)')
     plt.xlabel('Time (s)')
@@ -477,6 +464,60 @@ def plot_decision_layer(cortex_measures_pro, subcortex_measures_pro, cortex_meas
 
     if save:
         plt.savefig('Pictures/time/antisaccade_right_time_evolution')
+    if view:
+        plt.show()
+
+    plt.clf()
+
+
+def plot_rt_histogram(cortex_measures_pro, subcortex_measures_pro, cortex_measures_anti, dt, labels, threshold, view=False, save=True):
+    labels = np.array(labels)
+
+    # prosaccade
+    left_cortex = cortex_measures_pro[:, np.where(labels == 0)[0], :]
+    right_cortex = torch.flip(cortex_measures_pro[:, np.where(labels == 1)[0], :], dims=[2])
+    activations_cortex = torch.cat((left_cortex, right_cortex), dim=1)
+    left_subcortex = subcortex_measures_pro[:, np.where(labels == 0)[0], :]
+    right_subcortex = torch.flip(subcortex_measures_pro[:, np.where(labels == 1)[0], :], dims=[2])
+    activations_subcortex = torch.cat((left_subcortex, right_subcortex), dim=1)
+
+    rts = torch.zeros((activations_cortex.size(1), 2))
+    for i in range(activations_cortex.size(1)):
+        rts[i, 0] = get_decision_threshold(activations_cortex[:, i, 0], threshold, dt)
+    for i in range(activations_subcortex.size(1)):
+        rts[i, 1] = get_decision_threshold(activations_subcortex[:, i, 0], threshold, dt)
+
+    plt.ylabel('Frequency')
+    plt.xlabel('Time (s)')
+    plt.title('Response time distribution with prosaccade')
+
+    plt.hist(rts[:, 0], bins='auto', color='red', label='Cortex')
+    plt.hist(rts[:, 1], bins='auto', color='blue', label='Subcortex')
+
+    if save:
+        plt.savefig('Pictures/time/prosaccade_rt_histogram')
+    if view:
+        plt.show()
+
+    plt.clf()
+
+    # antisaccade
+    left_cortex = cortex_measures_anti[:, np.where(labels == 0)[0], :]
+    right_cortex = torch.flip(cortex_measures_anti[:, np.where(labels == 1)[0], :], dims=[2])
+    activations_cortex = torch.cat((left_cortex, right_cortex), dim=1)
+
+    rts = torch.zeros((activations_cortex.size(1)))
+    for i in range(activations_cortex.size(1)):
+        rts[i] = get_decision_threshold(activations_cortex[:, i, 1], threshold, dt)
+
+    plt.ylabel('Frequency')
+    plt.xlabel('Time (s)')
+    plt.title('Response time distribution with antisaccade')
+
+    plt.hist(rts, bins=10, color='red')
+
+    if save:
+        plt.savefig('Pictures/time/antisaccade_rt_histogram')
     if view:
         plt.show()
 

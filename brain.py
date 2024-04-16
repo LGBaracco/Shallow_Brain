@@ -82,4 +82,6 @@ class ANNBrain(nn.Module):
 
         subcortex_activations = self.subcortex.time_evolution(x, total_timesteps, inhibition)
 
-        return cortex_activations, subcortex_activations
+        final_activation = cortex_activations[-1] + subcortex_activations[-1]
+
+        return cortex_activations, subcortex_activations, final_activation
