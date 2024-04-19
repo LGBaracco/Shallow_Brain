@@ -108,7 +108,7 @@ def fine_tuning(network, cues, stimuli, labels, batch_size: int, lr: float, epoc
     print('accuracy: ' + str(accuracy))
 
     if accuracy == 100.0:
-        torch.save(network.state_dict(), './conv.pth')
+        torch.save(network.state_dict(), 'data/conv.pth')
         print('saved!')
 
     return network, accuracy
@@ -156,7 +156,7 @@ def train_subcortex(data: npt.NDArray, labels: List, batch_size: int, lr: float,
 
     # Do not save model if accuracy is not 100%
     if accuracy == 100.0:
-        torch.save(network.state_dict(), './subc.pth')
+        torch.save(network.state_dict(), 'data/subc.pth')
         print('saved!')
 
     return network, accuracy

@@ -232,18 +232,37 @@ def plot_decision_evolution(cortex_measures_pro, subcortex_measures_pro, cortex_
     time = np.arange(0, (total_time*dt)+dt, dt)
     labels = np.array(labels)
 
-    # prosaccade
-    left_cortex = cortex_measures_pro[:, np.where(labels == 0)[0], :]
-    right_cortex = torch.flip(cortex_measures_pro[:, np.where(labels == 1)[0], :], dims=[2])
-    activations_cortex = torch.cat((left_cortex, right_cortex), dim=1)
-    means_cortex = torch.mean(activations_cortex, dim=1)
-    std_cortex = stats.sem(activations_cortex, axis=1)
+    # Whether one training session is considered or multiple averaged
+    singleiter = True if len(cortex_measures_pro.size()) == 3 else False
 
-    left_subcortex = subcortex_measures_pro[:, np.where(labels == 0)[0], :]
-    right_subcortex = torch.flip(subcortex_measures_pro[:, np.where(labels == 1)[0], :], dims=[2])
-    activations_subcortex = torch.cat((left_subcortex, right_subcortex), dim=1)
-    means_subcortex = torch.mean(activations_subcortex, dim=1)
-    std_subcortex = stats.sem(activations_subcortex, axis=1)
+    # prosaccade
+    if singleiter:
+        left_cortex = cortex_measures_pro[:, np.where(labels == 0)[0], :]
+        right_cortex = torch.flip(cortex_measures_pro[:, np.where(labels == 1)[0], :], dims=[2])
+        activations_cortex = torch.cat((left_cortex, right_cortex), dim=1)
+        means_cortex = torch.mean(activations_cortex, dim=1)
+        std_cortex = stats.sem(activations_cortex, axis=1)
+
+        left_subcortex = subcortex_measures_pro[:, np.where(labels == 0)[0], :]
+        right_subcortex = torch.flip(subcortex_measures_pro[:, np.where(labels == 1)[0], :], dims=[2])
+        activations_subcortex = torch.cat((left_subcortex, right_subcortex), dim=1)
+        means_subcortex = torch.mean(activations_subcortex, dim=1)
+        std_subcortex = stats.sem(activations_subcortex, axis=1)
+    else:
+        left_cortex = cortex_measures_pro[:, :, np.where(labels == 0)[0], :]
+        right_cortex = torch.flip(cortex_measures_pro[:, :, np.where(labels == 1)[0], :], dims=[3])
+        activations_cortex = torch.cat((left_cortex, right_cortex), dim=2)
+        means_cortex = torch.mean(activations_cortex, dim=(0, 2))
+        # Manually compute sem since stats.sem require 1d-axis
+        std_cortex = torch.std(activations_cortex, dim=(0, 2)) / np.sqrt(activations_cortex.size(0) +
+                                                                         activations_cortex.size(2))
+
+        left_subcortex = subcortex_measures_pro[:, :, np.where(labels == 0)[0], :]
+        right_subcortex = torch.flip(subcortex_measures_pro[:, :, np.where(labels == 1)[0], :], dims=[3])
+        activations_subcortex = torch.cat((left_subcortex, right_subcortex), dim=2)
+        means_subcortex = torch.mean(activations_subcortex, dim=(0, 2))
+        std_subcortex = torch.std(activations_subcortex, dim=(0, 2)) / np.sqrt(activations_subcortex.size(0) +
+                                                                               activations_subcortex.size(2))
 
     equilibria = [get_decision_threshold(means_cortex[:, 0], threshold, dt),
                   get_decision_threshold(means_cortex[:, 1], threshold, dt),
@@ -274,24 +293,39 @@ def plot_decision_evolution(cortex_measures_pro, subcortex_measures_pro, cortex_
     plt.ylim(-0.1, 1.1)
 
     if save:
-        plt.savefig('Pictures/time/prosaccade_time_evolution')
+        plt.savefig('Pictures/time/average_prosaccade_time_evolution')
     if view:
         plt.show()
 
     plt.clf()
 
     # antisaccade
-    left_cortex = cortex_measures_anti[:, np.where(labels == 0)[0], :]
-    right_cortex = torch.flip(cortex_measures_anti[:, np.where(labels == 1)[0], :], dims=[2])
-    activations_cortex = torch.cat((left_cortex, right_cortex), dim=1)
-    means_cortex = torch.mean(activations_cortex, dim=1)
-    std_cortex = stats.sem(activations_cortex, axis=1)
+    if singleiter:
+        left_cortex = cortex_measures_anti[:, np.where(labels == 0)[0], :]
+        right_cortex = torch.flip(cortex_measures_anti[:, np.where(labels == 1)[0], :], dims=[2])
+        activations_cortex = torch.cat((left_cortex, right_cortex), dim=1)
+        means_cortex = torch.mean(activations_cortex, dim=1)
+        std_cortex = stats.sem(activations_cortex, axis=1)
 
-    left_subcortex = subcortex_measures_anti[:, np.where(labels == 0)[0], :]
-    right_subcortex = torch.flip(subcortex_measures_anti[:, np.where(labels == 1)[0], :], dims=[2])
-    activations_subcortex = torch.cat((left_subcortex, right_subcortex), dim=1)
-    means_subcortex = torch.mean(activations_subcortex, dim=1)
-    std_subcortex = stats.sem(activations_subcortex, axis=1)
+        left_subcortex = subcortex_measures_anti[:, np.where(labels == 0)[0], :]
+        right_subcortex = torch.flip(subcortex_measures_anti[:, np.where(labels == 1)[0], :], dims=[2])
+        activations_subcortex = torch.cat((left_subcortex, right_subcortex), dim=1)
+        means_subcortex = torch.mean(activations_subcortex, dim=1)
+        std_subcortex = stats.sem(activations_subcortex, axis=1)
+    else:
+        left_cortex = cortex_measures_anti[:, :, np.where(labels == 0)[0], :]
+        right_cortex = torch.flip(cortex_measures_anti[:, :, np.where(labels == 1)[0], :], dims=[3])
+        activations_cortex = torch.cat((left_cortex, right_cortex), dim=2)
+        means_cortex = torch.mean(activations_cortex, dim=(0, 2))
+        std_cortex = torch.std(activations_cortex, dim=(0, 2)) / np.sqrt(
+            activations_cortex.size(0) + activations_cortex.size(2))
+
+        left_subcortex = subcortex_measures_anti[:, :, np.where(labels == 0)[0], :]
+        right_subcortex = torch.flip(subcortex_measures_anti[:, :, np.where(labels == 1)[0], :], dims=[3])
+        activations_subcortex = torch.cat((left_subcortex, right_subcortex), dim=2)
+        means_subcortex = torch.mean(activations_subcortex, dim=(0, 2))
+        std_subcortex = torch.std(activations_subcortex, dim=(0, 2)) / np.sqrt(
+            activations_subcortex.size(0) + activations_subcortex.size(2))
 
     equilibria = [get_decision_threshold(means_cortex[:, 1], threshold, dt),
                   get_decision_threshold(means_cortex[:, 0], threshold, dt),
@@ -320,7 +354,7 @@ def plot_decision_evolution(cortex_measures_pro, subcortex_measures_pro, cortex_
     plt.ylim(-0.1, 1.1)
 
     if save:
-        plt.savefig('Pictures/time/antisaccade_time_evolution')
+        plt.savefig('Pictures/time/average_antisaccade_time_evolution')
     if view:
         plt.show()
 
@@ -331,13 +365,41 @@ def plot_decision_layer(cortex_measures_pro, subcortex_measures_pro, cortex_meas
     time = np.arange(0, (total_time * dt) + dt, dt)
     labels = np.array(labels)
 
+    # Whether one training session is considered or multiple averaged
+    singleiter = True if len(cortex_measures_pro.size()) == 3 else False
+    '''if len(cortex_measures_pro.size()) > 3:
+        cortex_measures_pro = cortex_measures_pro.contiguous().view((cortex_measures_pro.size(1),
+                                                           cortex_measures_pro.size(0) * cortex_measures_pro.size(2),
+                                                           cortex_measures_pro.size(3)))
+        subcortex_measures_pro = subcortex_measures_pro.contiguous().view((subcortex_measures_pro.size(1),
+                                                                 subcortex_measures_pro.size(0) * subcortex_measures_pro.size(2),
+                                                                 subcortex_measures_pro.size(3)))
+        cortex_measures_anti = cortex_measures_anti.contiguous().view((cortex_measures_anti.size(1),
+                                                             cortex_measures_anti.size(0) * cortex_measures_anti.size(2),
+                                                             cortex_measures_anti.size(3)))
+        subcortex_measures_anti = subcortex_measures_anti.contiguous().view((subcortex_measures_anti.size(1),
+                                                                   subcortex_measures_anti.size(0) * subcortex_measures_anti.size(2),
+                                                                   subcortex_measures_anti.size(3)))'''
+
     # Left and prosaccade
-    activations_cortex = cortex_measures_pro[:, np.where(labels == 0)[0], :]
-    means_cortex = torch.mean(activations_cortex, dim=1)
-    std_cortex = stats.sem(activations_cortex, axis=1)
-    activations_subcortex = subcortex_measures_pro[:, np.where(labels == 0)[0], :]
-    means_subcortex = torch.mean(activations_subcortex, dim=1)
-    std_subcortex = stats.sem(activations_subcortex, axis=1)
+    if singleiter:
+        activations_cortex = cortex_measures_pro[:, np.where(labels == 0)[0], :]
+        means_cortex = torch.mean(activations_cortex, dim=1)
+        std_cortex = stats.sem(activations_cortex, axis=1)
+        activations_subcortex = subcortex_measures_pro[:, np.where(labels == 0)[0], :]
+        means_subcortex = torch.mean(activations_subcortex, dim=1)
+        std_subcortex = stats.sem(activations_subcortex, axis=1)
+    else:
+        activations_cortex = cortex_measures_pro[:, :, np.where(labels == 0)[0], :]
+        means_cortex = torch.mean(activations_cortex, dim=(0, 2))
+        # Manually compute sem since stats.sem require 1d-axis
+        std_cortex = torch.std(activations_cortex, dim=(0, 2)) / np.sqrt(activations_cortex.size(0) +
+                                                                         activations_cortex.size(2))
+
+        activations_subcortex = subcortex_measures_pro[:, :, np.where(labels == 0)[0], :]
+        means_subcortex = torch.mean(activations_subcortex, dim=(0, 2))
+        std_subcortex = torch.std(activations_subcortex, dim=(0, 2)) / np.sqrt(activations_subcortex.size(0) +
+                                                                               activations_subcortex.size(2))
 
     plt.ylabel('Firing rate (a.u.)')
     plt.xlabel('Time (s)')
@@ -361,19 +423,30 @@ def plot_decision_layer(cortex_measures_pro, subcortex_measures_pro, cortex_meas
     plt.xlim(0, time[-1])
 
     if save:
-        plt.savefig('Pictures/time/prosaccade_left_time_evolution')
+        plt.savefig('Pictures/time/average_prosaccade_left_time_evolution')
     if view:
         plt.show()
 
     plt.clf()
 
     # Right and prosaccade
-    activations_cortex = cortex_measures_pro[:, np.where(labels == 1)[0], :]
-    means_cortex = torch.mean(activations_cortex, dim=1)
-    std_cortex = stats.sem(activations_cortex, axis=1)
-    activations_subcortex = subcortex_measures_pro[:, np.where(labels == 1)[0], :]
-    means_subcortex = torch.mean(activations_subcortex, dim=1)
-    std_subcortex = stats.sem(activations_subcortex, axis=1)
+    if singleiter:
+        activations_cortex = cortex_measures_pro[:, np.where(labels == 1)[0], :]
+        means_cortex = torch.mean(activations_cortex, dim=1)
+        std_cortex = stats.sem(activations_cortex, axis=1)
+        activations_subcortex = subcortex_measures_pro[:, np.where(labels == 1)[0], :]
+        means_subcortex = torch.mean(activations_subcortex, dim=1)
+        std_subcortex = stats.sem(activations_subcortex, axis=1)
+    else:
+        activations_cortex = cortex_measures_pro[:, :, np.where(labels == 1)[0], :]
+        means_cortex = torch.mean(activations_cortex, dim=(0, 2))
+        std_cortex = torch.std(activations_cortex, dim=(0, 2)) / np.sqrt(activations_cortex.size(0) +
+                                                                         activations_cortex.size(2))
+
+        activations_subcortex = subcortex_measures_pro[:, :, np.where(labels == 1)[0], :]
+        means_subcortex = torch.mean(activations_subcortex, dim=(0, 2))
+        std_subcortex = torch.std(activations_subcortex, dim=(0, 2)) / np.sqrt(activations_subcortex.size(0) +
+                                                                               activations_subcortex.size(2))
 
     plt.ylabel('Firing rate (a.u.)')
     plt.xlabel('Time (s)')
@@ -395,19 +468,30 @@ def plot_decision_layer(cortex_measures_pro, subcortex_measures_pro, cortex_meas
     plt.xlim(0, time[-1])
 
     if save:
-        plt.savefig('Pictures/time/prosaccade_right_time_evolution')
+        plt.savefig('Pictures/time/average_prosaccade_right_time_evolution')
     if view:
         plt.show()
 
     plt.clf()
 
     # Left and antisaccade
-    activations_cortex = cortex_measures_anti[:, np.where(labels == 0)[0], :]
-    means_cortex = torch.mean(activations_cortex, dim=1)
-    std_cortex = stats.sem(activations_cortex, axis=1)
-    activations_subcortex = subcortex_measures_anti[:, np.where(labels == 0)[0], :]
-    means_subcortex = torch.mean(activations_subcortex, dim=1)
-    std_subcortex = stats.sem(activations_subcortex, axis=1)
+    if singleiter:
+        activations_cortex = cortex_measures_anti[:, np.where(labels == 0)[0], :]
+        means_cortex = torch.mean(activations_cortex, dim=1)
+        std_cortex = stats.sem(activations_cortex, axis=1)
+        activations_subcortex = subcortex_measures_anti[:, np.where(labels == 0)[0], :]
+        means_subcortex = torch.mean(activations_subcortex, dim=1)
+        std_subcortex = stats.sem(activations_subcortex, axis=1)
+    else:
+        activations_cortex = cortex_measures_anti[:, :, np.where(labels == 0)[0], :]
+        means_cortex = torch.mean(activations_cortex, dim=(0, 2))
+        std_cortex = torch.std(activations_cortex, dim=(0, 2)) / np.sqrt(activations_cortex.size(0) +
+                                                                         activations_cortex.size(2))
+
+        activations_subcortex = subcortex_measures_anti[:, :, np.where(labels == 0)[0], :]
+        means_subcortex = torch.mean(activations_subcortex, dim=(0, 2))
+        std_subcortex = torch.std(activations_subcortex, dim=(0, 2)) / np.sqrt(activations_subcortex.size(0) +
+                                                                               activations_subcortex.size(2))
 
     plt.ylabel('Firing rate (a.u.)')
     plt.xlabel('Time (s)')
@@ -429,19 +513,30 @@ def plot_decision_layer(cortex_measures_pro, subcortex_measures_pro, cortex_meas
     plt.xlim(0, time[-1])
 
     if save:
-        plt.savefig('Pictures/time/antisaccade_left_time_evolution')
+        plt.savefig('Pictures/time/average_antisaccade_left_time_evolution')
     if view:
         plt.show()
 
     plt.clf()
 
     # Right and antisaccade
-    activations_cortex = cortex_measures_anti[:, np.where(labels == 1)[0], :]
-    means_cortex = torch.mean(activations_cortex, dim=1)
-    std_cortex = stats.sem(activations_cortex, axis=1)
-    activations_subcortex = subcortex_measures_anti[:, np.where(labels == 1)[0], :]
-    means_subcortex = torch.mean(activations_subcortex, dim=1)
-    std_subcortex = stats.sem(activations_subcortex, axis=1)
+    if singleiter:
+        activations_cortex = cortex_measures_anti[:, np.where(labels == 1)[0], :]
+        means_cortex = torch.mean(activations_cortex, dim=1)
+        std_cortex = stats.sem(activations_cortex, axis=1)
+        activations_subcortex = subcortex_measures_anti[:, np.where(labels == 1)[0], :]
+        means_subcortex = torch.mean(activations_subcortex, dim=1)
+        std_subcortex = stats.sem(activations_subcortex, axis=1)
+    else:
+        activations_cortex = cortex_measures_anti[:, :, np.where(labels == 1)[0], :]
+        means_cortex = torch.mean(activations_cortex, dim=(0, 2))
+        std_cortex = torch.std(activations_cortex, dim=(0, 2)) / np.sqrt(activations_cortex.size(0) +
+                                                                         activations_cortex.size(2))
+
+        activations_subcortex = subcortex_measures_anti[:, :, np.where(labels == 1)[0], :]
+        means_subcortex = torch.mean(activations_subcortex, dim=(0, 2))
+        std_subcortex = torch.std(activations_subcortex, dim=(0, 2)) / np.sqrt(activations_subcortex.size(0) +
+                                                                               activations_subcortex.size(2))
 
     plt.ylabel('Firing rate (a.u.)')
     plt.xlabel('Time (s)')
@@ -463,7 +558,7 @@ def plot_decision_layer(cortex_measures_pro, subcortex_measures_pro, cortex_meas
     plt.xlim(0, time[-1])
 
     if save:
-        plt.savefig('Pictures/time/antisaccade_right_time_evolution')
+        plt.savefig('Pictures/time/average_antisaccade_right_time_evolution')
     if view:
         plt.show()
 
@@ -471,15 +566,34 @@ def plot_decision_layer(cortex_measures_pro, subcortex_measures_pro, cortex_meas
 
 
 def plot_rt_histogram(cortex_measures_pro, subcortex_measures_pro, cortex_measures_anti, dt, labels, threshold, view=False, save=True):
+    
     labels = np.array(labels)
+    # Whether one training session is considered or multiple averaged
+    singleiter = True if len(cortex_measures_pro.size()) == 3 else False
 
     # prosaccade
-    left_cortex = cortex_measures_pro[:, np.where(labels == 0)[0], :]
-    right_cortex = torch.flip(cortex_measures_pro[:, np.where(labels == 1)[0], :], dims=[2])
-    activations_cortex = torch.cat((left_cortex, right_cortex), dim=1)
-    left_subcortex = subcortex_measures_pro[:, np.where(labels == 0)[0], :]
-    right_subcortex = torch.flip(subcortex_measures_pro[:, np.where(labels == 1)[0], :], dims=[2])
-    activations_subcortex = torch.cat((left_subcortex, right_subcortex), dim=1)
+    if singleiter:
+        left_cortex = cortex_measures_pro[:, np.where(labels == 0)[0], :]
+        right_cortex = torch.flip(cortex_measures_pro[:, np.where(labels == 1)[0], :], dims=[2])
+        activations_cortex = torch.cat((left_cortex, right_cortex), dim=1)
+        left_subcortex = subcortex_measures_pro[:, np.where(labels == 0)[0], :]
+        right_subcortex = torch.flip(subcortex_measures_pro[:, np.where(labels == 1)[0], :], dims=[2])
+        activations_subcortex = torch.cat((left_subcortex, right_subcortex), dim=1)
+
+    else:
+        left_cortex = cortex_measures_pro[:, :, np.where(labels == 0)[0], :]
+        right_cortex = torch.flip(cortex_measures_pro[:, :, np.where(labels == 1)[0], :], dims=[3])
+        activations_cortex = torch.cat((left_cortex, right_cortex), dim=2)
+        activations_cortex = activations_cortex.view((activations_cortex.size(1),
+                                                      activations_cortex.size(0)*activations_cortex.size(2),
+                                                      activations_cortex.size(3)))
+
+        left_subcortex = subcortex_measures_pro[:, :, np.where(labels == 0)[0], :]
+        right_subcortex = torch.flip(subcortex_measures_pro[:, :, np.where(labels == 1)[0], :], dims=[3])
+        activations_subcortex = torch.cat((left_subcortex, right_subcortex), dim=2)
+        activations_subcortex = activations_subcortex.view((activations_subcortex.size(1),
+                                                      activations_subcortex.size(0) * activations_subcortex.size(2),
+                                                      activations_subcortex.size(3)))
 
     rts = torch.zeros((activations_cortex.size(1), 2))
     for i in range(activations_cortex.size(1)):
@@ -495,16 +609,24 @@ def plot_rt_histogram(cortex_measures_pro, subcortex_measures_pro, cortex_measur
     plt.hist(rts[:, 1], bins='auto', color='blue', label='Subcortex')
 
     if save:
-        plt.savefig('Pictures/time/prosaccade_rt_histogram')
+        plt.savefig('Pictures/time/average_prosaccade_rt_histogram')
     if view:
         plt.show()
 
     plt.clf()
 
     # antisaccade
-    left_cortex = cortex_measures_anti[:, np.where(labels == 0)[0], :]
-    right_cortex = torch.flip(cortex_measures_anti[:, np.where(labels == 1)[0], :], dims=[2])
-    activations_cortex = torch.cat((left_cortex, right_cortex), dim=1)
+    if singleiter:
+        left_cortex = cortex_measures_anti[:, np.where(labels == 0)[0], :]
+        right_cortex = torch.flip(cortex_measures_anti[:, np.where(labels == 1)[0], :], dims=[2])
+        activations_cortex = torch.cat((left_cortex, right_cortex), dim=1)
+    else:
+        left_cortex = cortex_measures_anti[:, :, np.where(labels == 0)[0], :]
+        right_cortex = torch.flip(cortex_measures_anti[:, :, np.where(labels == 1)[0], :], dims=[3])
+        activations_cortex = torch.cat((left_cortex, right_cortex), dim=2)
+        activations_cortex = activations_cortex.view((activations_cortex.size(1),
+                                                      activations_cortex.size(0) * activations_cortex.size(2),
+                                                      activations_cortex.size(3)))
 
     rts = torch.zeros((activations_cortex.size(1)))
     for i in range(activations_cortex.size(1)):
@@ -517,7 +639,7 @@ def plot_rt_histogram(cortex_measures_pro, subcortex_measures_pro, cortex_measur
     plt.hist(rts, bins=10, color='red')
 
     if save:
-        plt.savefig('Pictures/time/antisaccade_rt_histogram')
+        plt.savefig('Pictures/time/average_antisaccade_rt_histogram')
     if view:
         plt.show()
 
