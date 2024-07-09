@@ -15,18 +15,29 @@ import torch
 def main():
 
     # Hyperparameters
+    # Training parameters
     ITERATIONS = 30  # re-training iterations
     BATCH_SIZE = 32
     LR = 0.003
     EPOCHS = 150
-    TIMESTEPS = 150
+
+    # Temporal parameters
+    TIMESTEPS = 120
     DT = 0.01
     TAU = 0.1
     R_INITIAL = 0.0
-    THRESHOLD = 0.75  # convergence threshold of continuous-time network
-    # -1 training subcortex 0 training cortex, 1 sanity check, 2 and 3 training/testing subcort and cort, 4 and 5 plotting subcort and cort,
-    # 6 test full brain, 7 step-wise analysis, 8 and 9 continuous analysis, 10 full ct brain, 11 full ct brain across iters
-    TRAINING = 10
+    THRESHOLD = 0.7  # convergence decision threshold
+
+    # Change this parameter to decide what action to perform
+    # -1 training subcortex 0 training cortex, 1 and 2 training/testing subcortex and cortex, 3 plotting subcort and cort,
+    # 4 test accuracy full brain, 5 step-wise analysis,
+    # 6 continuous time analysis (sanity check), 7 full continuous time analysis,
+    # 8 full ct analysis across training sessions (data for paper plots) # 9 plotting full ct analysis (get data from 8)
+    TRAINING = 8
+
+    # Plotting parameters
+    VIEW = True
+    SAVE = True
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -48,19 +59,10 @@ def main():
         if network is None:
             main()  # Restart in case accuracy is not 100%
 
-        # Fine-tuning motor areas
+        # Train motor area
         fine_tune_network(cues, cue_labels, stimuli, stimuli_labels, network, BATCH_SIZE, LR, EPOCHS, device)
 
-    elif TRAINING == 1:  # quick sanity check
-        cues, stimuli = generate_sanity_check()
-
-        network = ConvolutionalClassifier().to(device)
-        state_dict = torch.load('data/conv.pth')
-        network.load_state_dict(state_dict)
-
-        simple_test(network, cues, stimuli, device)
-
-    elif TRAINING == 2:
+    elif TRAINING == 1:
 
         measures = np.zeros((ITERATIONS, 3))  # get all the necessary measures for each iteration
         vague_predictions = np.zeros((ITERATIONS, 11))
@@ -73,7 +75,7 @@ def main():
 
             # 2f brightness test set
             stimuli, labels = generate_test_set()
-            brightness_accuracy = test(network, stimuli, labels, device)
+            brightness_accuracy = test_subcortex(network, stimuli, labels, device)
             measures[i, 1] = brightness_accuracy
 
             # Ambiguous test
@@ -88,7 +90,7 @@ def main():
             with open('data/brightnesses_subcortex.npy', 'wb') as f:
                 np.save(f, vague_predictions)  # save measures in an external file
 
-    elif TRAINING == 3:  # get NDArray with all final quantitative measures
+    elif TRAINING == 2:  # get NDArray with all final quantitative measures
 
         measures = np.zeros((ITERATIONS, 6))  # get all the necessary measures for each iteration
         vague_predictions = np.zeros((ITERATIONS, 11))
@@ -109,7 +111,7 @@ def main():
 
             # 2f brightness test set
             stimuli, labels = generate_test_set()
-            brightness_accuracy, motor_accuracy = test(network, stimuli, labels, cues, device)
+            brightness_accuracy, motor_accuracy = test_cortex(network, stimuli, labels, cues, device)
             measures[i, 2:4] = brightness_accuracy
 
             # Ambiguous test
@@ -125,21 +127,22 @@ def main():
         with open('data/brightnesses.npy', 'wb') as f:
             np.save(f, vague_predictions)  # save measures in an external file
 
-    elif TRAINING == 4:
+    elif TRAINING == 3:
+        # Subcortex
         measures = np.load('data/measures_subcortex.npy')
         brightnesses = np.load('data/brightnesses_subcortex.npy')
-        plot_accuracy(measures[:, :2], True, True)
-        plot_ratio(measures[:, 2:], True, True)
-        plot_equal_brightness(brightnesses, True, True, True)
+        plot_accuracy(measures[:, :2], VIEW, SAVE)
+        plot_ratio(measures[:, 2:], VIEW, SAVE)
+        plot_equal_brightness(brightnesses, VIEW, SAVE, True)
 
-    elif TRAINING == 5:
+        # Cortex
         measures = np.load('data/measures.npy')
         brightnesses = np.load('data/brightnesses.npy')
-        plot_accuracy(measures[:, :4], True, False)
-        plot_ratio(measures[:, 4:], False, False)
-        plot_equal_brightness(brightnesses, False, False, False)
+        plot_accuracy(measures[:, :4], VIEW, SAVE)
+        plot_ratio(measures[:, 4:], VIEW, SAVE)
+        plot_equal_brightness(brightnesses, VIEW, SAVE, False)
 
-    elif TRAINING == 6:
+    elif TRAINING == 4:
 
         cortex = ConvolutionalClassifier().to(device)
         state_dict = torch.load('data/conv.pth')
@@ -155,7 +158,7 @@ def main():
 
         # plot_brain(measures, False, False) Deprecated: plots subcortex ratio when outputs are concatenated
 
-    elif TRAINING == 7:
+    elif TRAINING == 5:
 
         cortex = ConvolutionalClassifier().to(device)
         state_dict = torch.load('data/conv.pth')
@@ -169,35 +172,35 @@ def main():
         accuracy, measures = test_step_wise(network, cues, cue_labels, stimuli, stimuli_labels, device)
 
         print(accuracy, measures)
-        plot_heatmap(measures, True, False)
+        plot_heatmap(measures, VIEW, SAVE)
 
         # plot_brain(measures, False, False)
 
-    elif TRAINING == 8:
+    elif TRAINING == 6:
+        # Subcortex
         network = SubcortexMLP(dt=DT, r_initial=R_INITIAL).to(device)
         state_dict = torch.load('data/subc.pth')
         network.load_state_dict(state_dict)
 
         data = torch.from_numpy(stimuli).float().to(device)
-        result = stimuli_extractor(data[0:1, :, :])
         with torch.no_grad():
             activations = network.time_evolution(data[0:1, :, :], TIMESTEPS)
-        plot_evolution(activations, TIMESTEPS, DT, True, True)
+        plot_evolution(activations, TIMESTEPS, DT, VIEW, SAVE)
 
-    elif TRAINING == 9:
+        # Cortex
         network = ConvolutionalClassifier(dt=DT, r_initial=R_INITIAL).to(device)
         state_dict = torch.load('data/conv.pth')
         network.load_state_dict(state_dict)
 
         data = torch.from_numpy(stimuli).float().to(device)
         cues = torch.from_numpy(cues).float().to(device)
-        result = network(data[0:1, :, :], cues[0:1, :, :])
+        # result = network(data[0:1, :, :], cues[0:1, :, :])
         with torch.no_grad():
             activations = network.time_evolution(data[0:1, :, :], TIMESTEPS, cues[0:1, :, :])
 
-        plot_evolution(activations, TIMESTEPS, DT, True, True)
+        plot_evolution(activations, TIMESTEPS, DT, VIEW, SAVE)
 
-    elif TRAINING == 10:
+    elif TRAINING == 7:
 
         cortex = ConvolutionalClassifier(dt=DT, tau=TAU, r_initial=R_INITIAL).to(device)
         state_dict = torch.load('data/conv.pth')
@@ -207,6 +210,7 @@ def main():
         subcortex.load_state_dict(state_dict)
         network = ANNBrain(cortex, subcortex)
 
+        stimuli, stimuli_labels = generate_test_set()
         # stimuli += np.abs(np.random.normal(loc=0.0, scale=0.2, size=stimuli.shape))  # Gaussian noise
         data = torch.from_numpy(stimuli).float().to(torch.device('cuda'))
         cues = torch.from_numpy(cues).float().to(torch.device('cuda'))
@@ -217,11 +221,13 @@ def main():
 
         plot_decision_evolution(cortex_measures_pro, subcortex_measures_pro, cortex_measures_anti,
                                 subcortex_measures_anti,
-                                TIMESTEPS, DT, stimuli_labels, THRESHOLD, True, False)
+                                TIMESTEPS, DT, stimuli_labels, THRESHOLD, VIEW, SAVE)
         plot_rt_histogram(cortex_measures_pro, subcortex_measures_pro, cortex_measures_anti,
-                          DT, stimuli_labels, THRESHOLD, True, False)
+                          DT, stimuli_labels, THRESHOLD, VIEW, SAVE)
+        plot_rt_mixed(cortex_measures_pro, subcortex_measures_pro, cortex_measures_anti,
+                      DT, stimuli_labels, THRESHOLD, VIEW, SAVE)
 
-    elif TRAINING == 11:
+    elif TRAINING == 8:
 
         measures = torch.zeros((ITERATIONS, 4, TIMESTEPS+1, len(stimuli_labels), 2))
         for i in range(ITERATIONS):
@@ -257,16 +263,19 @@ def main():
             measures[i, 2, :, :, :] = cortex_measures_anti
             measures[i, 3, :, :, :] = subcortex_measures_anti
 
-        with open('data/time.npy', 'wb') as f:
-            np.save(f, measures)  # save measures in an external file
+        torch.save(measures, 'data/time.pth')  # save measures in an external file
+
+    elif TRAINING == 9:
+        measures = torch.load('data/time.pth')
 
         plot_decision_evolution(measures[:, 0, :, :, :], measures[:, 1, :, :, :], measures[:, 2, :, :, :], measures[:, 3, :, :, :],
-                                TIMESTEPS, DT, stimuli_labels, THRESHOLD, True, True)
+                                TIMESTEPS, DT, stimuli_labels, THRESHOLD, VIEW, SAVE)
         plot_rt_histogram(measures[:, 0, :, :, :], measures[:, 1, :, :, :], measures[:, 2, :, :, :],
-                          DT, stimuli_labels, THRESHOLD, True, True)
+                          DT, stimuli_labels, THRESHOLD, VIEW, SAVE)
+        plot_rt_mixed(measures[:, 0, :, :, :], measures[:, 1, :, :, :], measures[:, 2, :, :, :],
+                      DT, stimuli_labels, THRESHOLD, VIEW, SAVE)
         plot_decision_layer(measures[:, 0, :, :, :], measures[:, 1, :, :, :], measures[:, 2, :, :, :], measures[:, 3, :, :, :],
-                            TIMESTEPS, DT, stimuli_labels, True, True)
-
+                            TIMESTEPS, DT, stimuli_labels, VIEW, SAVE)
 
 
 def fine_tune_network(cues, cue_labels, stimuli, stimuli_labels, network, batch_size, lr, epochs, device):

@@ -37,7 +37,7 @@ def training(data: npt.NDArray, labels: List, batch_size: int, lr: float, epochs
             optimizer.step()
 
             running_loss += loss.item()
-        if epoch % 10 == 0:
+        if epoch % 50 == 0:
             print(f"Epoch #{epoch+1} Training loss: {running_loss / len(dataloader)}")
 
     # accuracy
@@ -91,7 +91,7 @@ def fine_tuning(network, cues, stimuli, labels, batch_size: int, lr: float, epoc
             optimizer.step()
 
             running_loss += loss.item()
-        if epoch % 10 == 0:
+        if epoch % 50 == 0:
             print(f"Epoch #{epoch+1} Training loss: {running_loss / len(stimuli_loader)}")
 
     # accuracy
@@ -138,7 +138,9 @@ def train_subcortex(data: npt.NDArray, labels: List, batch_size: int, lr: float,
             optimizer.step()
 
             running_loss += loss.item()
-        print(f"Epoch #{epoch+1} Training loss: {running_loss / len(dataloader)}")
+
+        if epoch % 50 == 0:
+            print(f"Epoch #{epoch+1} Training loss: {running_loss / len(dataloader)}")
 
     # accuracy
     correct = 0

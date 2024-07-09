@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 
 def generate_stimuli() -> (npt.NDArray, List):
+    """Generate all the training stimuli"""
 
     images = np.zeros((110, 16, 32))
     labels = []
@@ -61,7 +62,7 @@ def generate_cues() -> (npt.NDArray, List):
 
 
 def interleave(cues, cue_labels, stimuli, stimuli_labels) -> (npt.NDArray, List):
-    """Might be useless: interleave cues with stimuli. maybe useful for final testing"""
+    """Interleave cues with stimuli"""
 
     images = np.zeros((126, 16, 32))
     labels = []
@@ -80,10 +81,10 @@ def interleave(cues, cue_labels, stimuli, stimuli_labels) -> (npt.NDArray, List)
 def generate_test_set() -> (npt.NDArray, List):
     """Generate test set using stimuli with 2 decimal positions (training set only uses 1 decimal position)"""
 
-    stimuli = np.zeros((28, 16, 32))
+    stimuli = np.zeros((30, 16, 32))
     labels = []
 
-    for i in range(28):  # arbitrary number
+    for i in range(30):  # arbitrary number
 
         a = round(random.uniform(0, 1), 2)
         b = round(random.uniform(0, 1), 2)
@@ -107,6 +108,7 @@ def generate_test_set() -> (npt.NDArray, List):
 
 
 def generate_sanity_check() -> (np.ndarray, np.ndarray):
+    """Generate two random cues and two random stimuli from the training set"""
     cues, _ = generate_cues()
     cues = np.array([cues[3, :, :], cues[-3, :, :]])
     stimuli, _ = generate_stimuli()
@@ -145,15 +147,15 @@ def generate_vague() -> (np.ndarray, np.ndarray):
         stimuli[i, 6:10, 5:9] = i/10.0
         stimuli[i, 6:10, 23:27] = i/10.0
 
-    '''for i, cue in enumerate(cues):
-        plt.imshow(cue, cmap='gray')
-        filename = 'Pictures/vague_stimuli_cues/cue_' + str(i)
-        plt.savefig(filename)
-        plt.clf()
-    for i, stimulus in enumerate(stimuli):
-        plt.imshow(stimulus, cmap='gray')
-        filename = 'Pictures/vague_stimuli_cues/stimulus_' + str(i)
-        plt.savefig(filename)
-        plt.clf()'''
+    # for i, cue in enumerate(cues):
+    #     plt.imshow(cue, cmap='gray')
+    #     filename = 'Pictures/vague_stimuli_cues/cue_' + str(i)
+    #     plt.savefig(filename)
+    #     plt.clf()
+    # for i, stimulus in enumerate(stimuli):
+    #     plt.imshow(stimulus, cmap='gray')
+    #     filename = 'Pictures/vague_stimuli_cues/stimulus_' + str(i)
+    #     plt.savefig(filename)
+    #     plt.clf()
 
     return cues, stimuli

@@ -27,7 +27,7 @@ class SubcortexWW:
 
 class SubcortexMLP(nn.Module):
     """Model of the subcortical pathway based on a simple one-hidden-layer Perceptron"""
-    def __init__(self, r_initial=0.1, tau=0.01, dt=0.001):
+    def __init__(self, r_initial=0.0, tau=0.1, dt=0.01):
         super(SubcortexMLP, self).__init__()
 
         self.fc1 = nn.Linear(2, 16)
@@ -48,6 +48,7 @@ class SubcortexMLP(nn.Module):
         return x
 
     def ahead(self, x, t):
+        """Discrete-time evolution"""
 
         match t:
             case 0:
@@ -58,6 +59,9 @@ class SubcortexMLP(nn.Module):
                 return torch.log_softmax(self.fc2(x), dim=1)
 
     def time_evolution(self, x, total_timesteps, inhibition=1):
+        """Continuous-time evolution using ODE"""
+
+        # Get shapes from each layer to then store data
         x = stimuli_extractor(x).to(next(self.parameters()).device)
 
         r0_out = r1_out = r2_out = self.r_initial

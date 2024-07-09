@@ -47,7 +47,35 @@ def simple_test(network, cues, stimuli, device):
 
 
 @torch.no_grad()
-def test(network, stimuli, brightness_labels, cues, device) -> (float, float):
+def test_subcortex(network, stimuli, brightness_labels, device) -> (float, float):
+    """Test the classification accuracy using test set stimuli"""
+
+    network = network.to(device)
+    stimuli = torch.from_numpy(stimuli).float().to(device)
+    brightness_labels = torch.tensor(brightness_labels).float().to(device)
+
+    stimuli_dataset = TensorDataset(stimuli, brightness_labels)
+    stimuli_loader = DataLoader(stimuli_dataset, batch_size=1, shuffle=False)
+
+    correct_brightness = 0
+    total = 0
+    for stimulus, brightness_label in stimuli_loader:
+
+        # Classify stimuli
+        outputs = network(stimulus)
+        _, predicted_stimulus = torch.max(outputs, 1)
+
+        total += brightness_label.size(0)
+        correct_brightness += (predicted_stimulus == brightness_label).sum().item()
+
+    brightness_accuracy = 100 * correct_brightness / total
+    print('brightness accuracy: ' + str(brightness_accuracy))
+
+    return brightness_accuracy
+
+
+@torch.no_grad()
+def test_cortex(network, stimuli, brightness_labels, cues, device) -> (float, float):
     """Test both the classification accuracy of both the stimuli and motor response using test set stimuli"""
 
     network = network.to(device)
@@ -151,7 +179,9 @@ def test_vague_stimuli(network, equal_stimuli, device) -> (float, float):
 
 @torch.no_grad()
 def test_brain(network, cues, cue_labels, stimuli, stimuli_labels, device):
-    """Testing the whole network combining cortex and subcortex. Check classification accuracy (should be 100%), and subcortex ratio"""
+    """Sanity check: Testing the whole network combining cortex and subcortex.
+        Get classification accuracy (should be 100%), and subcortex ratio"""
+
     network = network.to(device)
 
     cues = torch.from_numpy(cues).float().to(device)
@@ -201,7 +231,7 @@ def get_outputs(network, cues, stimuli):
 
 @torch.no_grad()
 def test_step_wise(network, cues, cue_labels, stimuli, stimuli_labels, device):
-    """Testing the whole network combining cortex and subcortex using a discreet time component."""
+    """Testing the whole network combining cortex and subcortex using a discrete time component."""
     network = network.to(device)
 
     cues = torch.from_numpy(cues).float().to(device)

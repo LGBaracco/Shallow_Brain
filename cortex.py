@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 
 class ConvolutionalClassifier(nn.Module):
-    def __init__(self, r_initial=0.1, tau=0.01, dt=0.001):
+    def __init__(self, r_initial=0.0, tau=0.1, dt=0.01):
         super(ConvolutionalClassifier, self).__init__()
 
         self.conv1 = nn.Conv2d(1, 4, 4)
@@ -56,6 +56,7 @@ class ConvolutionalClassifier(nn.Module):
         return x
 
     def ahead(self, x, t, cue=None):
+        """Discrete-time evolution"""
 
         match t:
             case 0:
@@ -89,9 +90,11 @@ class ConvolutionalClassifier(nn.Module):
                 return torch.log_softmax(self.fc3(x), dim=1)
 
     def time_evolution(self, x, total_timesteps, cue):
+        """Continuous-time evolution using ODE"""
 
         r0_out = r1_out = r2_out = r3_out = r4_out = r5_out = self.r_initial
 
+        # Get shapes from each layer to then store data
         y = x.unsqueeze(1)
         r0 = torch.full((y.size()), self.r_initial, device=x.device)
         r0_values = torch.zeros((total_timesteps+1,) + y.size())
