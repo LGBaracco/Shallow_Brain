@@ -2,4 +2,4 @@ A computational implementation of the [shallow brain hypothesis](https://www.nat
 
 Specifically, the parallel computations of the cortical and subcortical streams are simulated. See Everling & Fischer (1998) for additional information about these specific pathways.
 
-[A paper based on this model has been published!](https://www.sciencedirect.com/science/article/pii/S2665945X2600001X)
+[A paper describing this model has been published!](https://www.sciencedirect.com/science/article/pii/S2665945X2600001X)
