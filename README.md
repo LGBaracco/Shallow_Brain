@@ -1,4 +1,4 @@
-A computational implementation of the [shallow brain hypothesis](https://www.nature.com/articles/s41583-023-00756-z) by Suzuki et al. 
+A computational implementation of the [shallow brain hypothesis](https://www.nature.com/articles/s41583-023-00756-z) by Suzuki et al. (2023)
 
 Specifically, the parallel computations of the cortical and subcortical streams are simulated. See Everling & Fischer (1998) for additional information about these specific pathways.
 
